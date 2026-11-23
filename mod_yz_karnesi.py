@@ -271,6 +271,17 @@ def render_yz_karnesi():
             st.rerun()
 
     # ═══ VERİ ═══ 🔥 PERF: SQLite sorgusunu 2dk cache'le — sekme geçişlerinde tekrar okunmaz
+    @st.cache_data(ttl=120, show_spinner=False)
+    def _sinyal_verisi_oku():
+        try:
+            conn = sqlite3.connect(DB_ISMI)
+            df = pd.read_sql_query("SELECT * FROM ai_sinyaller ORDER BY id DESC", conn)
+            conn.close()
+            return df
+        except Exception as e:
+            st.error(f"🚨 Veritabanı Hatası: {e}")
+            return pd.DataFrame()
+
     @st.cache_data(ttl=300, show_spinner=False)
     def _arsiv_verisi_oku():
         try:
@@ -286,6 +297,7 @@ def render_yz_karnesi():
         except Exception:
             return pd.DataFrame()
 
+    df = _sinyal_verisi_oku()
     df_arsiv = _arsiv_verisi_oku()
 
     if df.empty:
@@ -418,11 +430,11 @@ def render_yz_karnesi():
     #  ███ TAB'LI BÖLÜM: HİSSELER & COİNLER ███
     # ══════════════════════════════════════════════════════════════════
 
-    tab_hisse, tab_coin = st.tabs([
+    tab_hisse, tab_coin, tab_arsiv = st.tabs([
         f"📈 HİSSE SENETLERİ ({len(df_hisse)})",
-        f"🪙 KRİPTO COİNLER ({len(df_coin)})"
+        f"🪙 KRİPTO COİNLER ({len(df_coin)})",
+        f"📦 ARŞİV ({len(df_arsiv)})"
     ])
-
     with tab_hisse:
         _metrik_satiri(h_st)
         _progress_bar(h_st)
@@ -458,7 +470,36 @@ def render_yz_karnesi():
             _durum_gruplu_tablo(coin_basarisiz, "STOP OLAN COİNLER", "❌", "badge-red", "#ff3b5c")
             _durum_gruplu_tablo(coin_bekleyen, "BEKLEYEN COİNLER", "⏳", "badge-yellow", "#f5cc6a")
             _durum_gruplu_tablo(coin_zaman, "ZAMAN AŞIMI COİNLER", "⏰", "badge-blue", "#ff8c42")
+    with tab_arsiv:
+        st.info("📦 **2026 Haziran ve öncesine** ait kapanmış işlemler burada saklanır. Aktif YZ Karnesi ve Otonom Strateji hesaplamalarına dahil edilmez.")
+        if df_arsiv.empty:
+            st.caption("Arşivde henüz kayıtlı işlem bulunmuyor.")
+        else:
+            df_arsiv['is_crypto'] = df_arsiv['hisse'].apply(is_crypto)
+            arsiv_hisse = df_arsiv[~df_arsiv['is_crypto']].copy()
+            arsiv_coin = df_arsiv[df_arsiv['is_crypto']].copy()
 
+            # ── ÜST KISIM: ARŞİV HİSSE SENETLERİ ──
+            st.markdown(f"### 📈 Arşivlenmiş Hisse Senetleri ({len(arsiv_hisse)})")
+            if arsiv_hisse.empty:
+                st.caption("Arşivde hisse senedi işlemi yok.")
+            else:
+                ah_st = _hesapla(arsiv_hisse)
+                _metrik_satiri(ah_st)
+                _progress_bar(ah_st)
+                _tablo_goster(arsiv_hisse, max_yukseklik=350)
+
+            st.markdown("---")
+
+            # ── ALT KISIM: ARŞİV KRİPTO COİNLER ──
+            st.markdown(f"### 🪙 Arşivlenmiş Kripto Coinler ({len(arsiv_coin)})")
+            if arsiv_coin.empty:
+                st.caption("Arşivde kripto coin işlemi yok.")
+            else:
+                ac_st = _hesapla(arsiv_coin)
+                _metrik_satiri(ac_st)
+                _progress_bar(ac_st)
+                _tablo_goster(arsiv_coin, max_yukseklik=350)
     # ── Sinyal Kalite Raporu (Tavsiye #4) ────────────────────────────
     if SINYAL_KALITE_AKTIF:
         with st.expander("📊 Sinyal Kalite Raporu (İndikatör Bazında Win Rate)", expanded=False):
