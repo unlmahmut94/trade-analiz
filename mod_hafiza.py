@@ -229,16 +229,9 @@ def sinyal_kaydet(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop_fiyat):
             eski_id, eski_giris, eski_durum, eski_tarih = mevcut_liste[0]
             fark_yuzde = abs(float(giris_fiyat) - float(eski_giris)) / float(eski_giris) * 100 if float(eski_giris) > 0 else 100
             
-            # Son 1 saat icinde ayni hisse kaydedilmisse spam engeli (gercek kisa vadeli spam)
-            # HAFTASONU DUZELTMESI: Hafta sonlari fiyatlar sabit kaldigi icin fark %1'in
-            # altinda olur ve bu kural tum sinyalleri eziyordu. Artik fiyat farki %1'in
-            # altinda olsa bile sinyal KAYDEDILIR; asiri spam sadece Telegram bildirimini
-            # engelleyerek sinirlandirilir (GUNCELLENDI mekanizmasi ayni hissedeki eski
-            # BEKLIYOR kayitlarini yine temizler, tablo siismez).
             try:
-                from datetime import datetime, timedelta
-                eski_dt = datetime.strptime(eski_tarih, "%Y-%m-%d %H:%M:%S")
-                if (datetime.now() - eski_dt).total_seconds() < 3600 and fark_yuzde < 1.0:
+                eski_dt = datetime.datetime.strptime(eski_tarih, "%Y-%m-%d %H:%M:%S")
+                if (datetime.datetime.now() - eski_dt).total_seconds() < 3600 and fark_yuzde < 1.0:
                     print(f"[BILGI] {hisse} son 1 saatte zaten BEKLIYOR (fark %{fark_yuzde:.1f}) - yine de kaydediliyor (hafta sonu sabit fiyat)")
             except:
                 pass
@@ -295,8 +288,6 @@ def _telegram_bildirim_gonder(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop
     try:
         kontrol_conn = sqlite3.connect(DB_YOLU)
         kc = kontrol_conn.cursor()
-        # ⭐ DUZELTME: Hem GUCLU AL hem GÜÇLÜ AL formatlarini kontrol et
-        # Türkçe karakter sorununu asmak için her iki formati da ara
         kc.execute(
             "SELECT id FROM ai_sinyaller WHERE hisse=? AND "
             "(sinyal_tipi LIKE '%GUCLU%AL%' OR sinyal_tipi LIKE '%GÜÇLÜ%AL%') "
@@ -340,11 +331,6 @@ def _telegram_bildirim_gonder(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop
 def bekleyenleri_kontrol_et():
     """
     Bekleyen tum pozisyonlari kontrol eder.
-    
-    DUZELTMELER (v1.1):
-    - Kripto semboller icin ccxt Binance kullanilir (yfinance desteklemez)
-    - Durum degerleri standart formatta yazilir (🎯 BAŞARILI / ⛔ BAŞARISIZ)
-    - Veri cekilemeyen semboller atlanir (hata verilmez)
     """
     try:
         conn = sqlite3.connect(DB_YOLU, timeout=20.0)
@@ -377,7 +363,7 @@ def bekleyenleri_kontrol_et():
                 
                 gun_farki = (simdi - sinyal_dt).days
                 
-                # Zaman asimi kontrolu: kripto 7 gun, hisse 30 gun
+                # Zaman asimi kontrolu: kripto 9 gun, hisse 30 gun
                 is_kripto = _is_kripto_sembol(hisse)
                 max_bekleme = MAX_BEKLEME_KRIPTO if is_kripto else MAX_BEKLEME_HISSE
                 if gun_farki > max_bekleme:
@@ -388,7 +374,7 @@ def bekleyenleri_kontrol_et():
                     c.execute('''UPDATE ai_sinyaller
                                  SET durum = ?, kapanis_fiyati = ?
                                  WHERE id = ?''', (DURUM_ZAMAN_ASIMI, son_fiyat, islem_id))
-                    tur_str = "KRIPTO 7" if is_kripto else "HISSE 30"
+                    tur_str = "KRIPTO 9" if is_kripto else "HISSE 30"
                     print(f"ZAMAN ASIMI ({tur_str}gun): {hisse} -> {gun_farki} gun gecti (Kapanis: {son_fiyat:.2f})")
                     kapanan += 1
                     continue
@@ -537,5 +523,3 @@ def eski_durumlari_normallestir():
     except Exception as e:
         print(f"[NORMALIZE] Hata: {e}")
         return 0
-
-
