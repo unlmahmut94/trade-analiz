@@ -342,7 +342,7 @@ _HTML_A = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>__SEMBOL__ · BorsaSinyal TradingView</title>
+<title>__SEMBOL__ · TradeAnaliz TradingView</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#0a1222; color:#d1d4dc; font-family:'Trebuchet MS', Roboto, sans-serif; }
@@ -372,7 +372,7 @@ body { background:#0a1222; color:#d1d4dc; font-family:'Trebuchet MS', Roboto, sa
 </head>
 <body>
 <div class="topbar">
-  <div class="brand">📊 BORSASİNYAL <span>PRO</span></div>
+  <div class="brand">📊 TRADEANALİZ <span>PRO</span></div>
   <div>
     <span class="sym-name">__SEMBOL__</span>
     <span class="sym-full">__SEMBOL_TAM__</span>

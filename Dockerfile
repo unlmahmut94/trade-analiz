@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════
-#  Dockerfile — BorsaSinyal Pro Terminal v3.2
+#  Dockerfile — TradeAnaliz Pro Terminal v3.2
 #  Çok aşamalı build: daha küçük imaj, daha hızlı deployment
 # ══════════════════════════════════════════════════════════════════════
 

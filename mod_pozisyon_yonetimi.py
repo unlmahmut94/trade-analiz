@@ -722,7 +722,7 @@ def _acil_durum_bildirimi(mesaj: str):
     
     try:
         from mod_telegram import telegram_mesaj_gonder
-        telegram_mesaj_gonder(f"🚨 BORSASİNYAL ACİL DURUM\n{mesaj}\nZaman: {datetime.now()}")
+        telegram_mesaj_gonder(f"🚨 TRADEANALİZ ACİL DURUM\n{mesaj}\nZaman: {datetime.now()}")
     except ImportError:
         pass
 

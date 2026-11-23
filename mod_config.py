@@ -63,7 +63,7 @@ def config_al(anahtar_yolu: str, varsayilan: Any = None) -> Any:
     Nokta ile ayrılmış anahtar yolundan değer okur.
     
     Örnekler:
-        config_al("uygulama.isim") → "BorsaSinyal Pro"
+        config_al("uygulama.isim") → "TradeAnaliz Pro"
         config_al("tarayici.batch_boyutu") → 50
         config_al("bulunmayan.anahtar", 42) → 42
     """

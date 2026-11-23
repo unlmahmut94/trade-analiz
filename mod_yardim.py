@@ -163,7 +163,7 @@ def yardim_paneli():
     st.markdown(f"""
     <div style="text-align:center;padding:28px 0 10px 0;">
       <div style="font-family:'Sora',sans-serif;font-size:10px;font-weight:300;color:var(--txt3);">
-        BorsaSinyal Pro Terminal · v3.1 · {datetime.now().year}
+        TradeAnaliz Pro Terminal · v3.1 · {datetime.now().year}
       </div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);
                   letter-spacing:.16em;margin-top:4px;text-transform:uppercase;">

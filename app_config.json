@@ -1,12 +1,12 @@
 {
-    "_aciklama": "BorsaSinyal Pro Terminal - Merkezi Konfigürasyon",
+    "_aciklama": "TradeAnaliz Pro Terminal - Merkezi Konfigürasyon",
     "_versiyon": "3.2",
     "_son_guncelleme": "2026-06-19",
 
     "uygulama": {
-        "isim": "BorsaSinyal Pro",
+        "isim": "TradeAnaliz Pro",
         "versiyon": "3.2",
-        "sayfa_basligi": "BorsaSinyal Pro",
+        "sayfa_basligi": "TradeAnaliz Pro",
         "sayfa_ikonu": "◈",
         "layout": "wide",
         "sidebar_baslangic": "collapsed",

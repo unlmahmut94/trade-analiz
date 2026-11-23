@@ -593,6 +593,6 @@ def filtreleme_paneli(hisse_analiz_paneli_fn):
     csv = fdf.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
         "📥 CSV Olarak İndir", data=csv,
-        file_name=f"borsasinyal_tarama_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+        file_name=f"tradeanaliz_tarama_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
         mime="text/csv"
     )

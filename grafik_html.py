@@ -755,9 +755,9 @@ def tradingview_grafik_html(
             borderwidth=1, borderpad=6
         )
     
-    # Sağ alt "BorsaSinyal Pro" logosu
+    # Sağ alt "TradeAnaliz Pro" logosu
     fig.add_annotation(
-        text="BorsaSinyal Pro • TradingView",
+        text="TradeAnaliz Pro • TradingView",
         xref="paper", yref="paper", x=1.0, y=0.0, showarrow=False,
         font=dict(size=8, color="rgba(120,123,134,0.4)"),
         xanchor="right", yanchor="bottom"
@@ -989,7 +989,7 @@ def veri_cek_ve_grafik_olustur(
         interval: Mum aralığı ("1d", "1wk", "1mo")
         gosterge_alt, gosterge_alt2: Alt göstergeler
         overlay_list: Fiyat üstü göstergeler
-        output_dir: HTML çıktı dizini (None = Desktop/borsa-sinyal)
+        output_dir: HTML çıktı dizini (None = Desktop/trade-analiz)
         otomatik_ac: True ise tarayıcıda otomatik açar
     
     Returns:
@@ -1327,7 +1327,7 @@ def tradingview_widget_html(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{safe_sym} · BorsaSinyal TradingView</title>
+<title>{safe_sym} · TradeAnaliz TradingView</title>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{
@@ -1464,7 +1464,7 @@ body {{
         <div style="font-family:monospace;font-size:10px;color:#787b86;letter-spacing:2px;
                     margin-bottom:16px;display:flex;align-items:center;gap:10px;">
             <span style="width:20px;height:2px;background:#f0c040;display:inline-block;border-radius:1px;"></span>
-            BORSASİNYAL PRO · ANALİZ
+            TRADEANALİZ PRO · ANALİZ
             <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(30,51,85,0.5),transparent);"></span>
         </div>
         
@@ -1499,7 +1499,7 @@ body {{
 </div>
 
 <div class="footer">
-    BorsaSinyal Pro Terminal · TradingView Widget · {now}
+    TradeAnaliz Pro Terminal · TradingView Widget · {now}
 </div>
 
 </body>
@@ -1596,7 +1596,7 @@ if __name__ == "__main__":
     import sys
     
     print("═" * 60)
-    print("📊 BorsaSinyal · TradingView Grafik Oluşturucu")
+    print("📊 TradeAnaliz · TradingView Grafik Oluşturucu")
     print("═" * 60)
     
     mode = input("Mod (1=Plotly HTML, 2=TradingView Widget): ").strip() or "2"

@@ -1,11 +1,11 @@
 @echo off
 chcp 65001 >nul 2>&1
-title BORSA SINYAL - ANA BASLATICI
+title TRADE ANALIZ - ANA BASLATICI
 cd /d "%~dp0"
 
 echo.
 echo   ============================================
-echo     BORSA SINYAL PRO TERMINAL v3.2
+echo     TRADE ANALIZ PRO TERMINAL v3.2
 echo   ============================================
 echo.
 echo   Baslatilacak servisler:

@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════
-#  app.py — BorsaSinyal Pro Terminal · v3.0 (EKSİKSİZ TAM SÜRÜM)
+#  app.py — TradeAnaliz Pro Terminal · v3.0 (EKSİKSİZ TAM SÜRÜM)
 # ══════════════════════════════════════════════════════════════════════
 #
 #  Modüller:
@@ -111,7 +111,7 @@ except ImportError:
 #  SAYFA AYARLARI
 # ══════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="BorsaSinyal Pro",
+    page_title="TradeAnaliz Pro",
     page_icon="◈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -146,7 +146,7 @@ st.markdown("""
 gecis_css()
 st.markdown("""
 <style>
-/* --- BORSASİNYAL ÖZEL ARAMA KUTUSU TASARIMI --- */
+/* --- TRADEANALİZ ÖZEL ARAMA KUTUSU TASARIMI --- */
 div[data-baseweb="select"] > div {
     background-color: rgba(10, 18, 36, 0.8) !important;
     border: 1px solid rgba(77, 184, 255, 0.2) !important;
@@ -195,7 +195,7 @@ st.markdown(f"""
     <div>
       <span style="font-family:'Sora','Outfit',sans-serif;font-size:22px;font-weight:800;
                   color:var(--txt1);letter-spacing:-.03em;">
-        Borsa<span style="color:var(--gold);">Sinyal</span>
+        Trade<span style="color:var(--gold);">Analiz</span>
       </span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--txt3);
                   letter-spacing:.3em;margin-left:12px;text-transform:uppercase;">

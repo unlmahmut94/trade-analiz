@@ -1,4 +1,4 @@
-# BorsaSinyal Pro Terminal v3.1
+# TradeAnaliz Pro Terminal v3.1
 
 Çok piyasalı (BIST, NASDAQ, S&P 500, Kripto) teknik ve ML tabanlı sinyal üretim sistemi.
 
@@ -51,7 +51,7 @@ python main.py --egitim-baslat --tip akilli
 ## Proje Yapısı
 
 ```
-borsa-sinyal/
+trade-analiz/
 ├── app.py                    # Streamlit ana uygulama
 ├── main.py                   # CLI giriş noktası
 ├── analiz.py                 # Teknik indikatör ve sinyal hesaplama

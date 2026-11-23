@@ -1,4 +1,4 @@
-# Borsa Sinyal Pro Terminal v3.0 — Python Bağımlılıkları
+# Trade Analiz Pro Terminal v3.0 — Python Bağımlılıkları
 
 # ── Veri Çekme & Fiyat ─────────────────────────────────────────────
 yfinance

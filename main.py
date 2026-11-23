@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════╗
-║   BORSA SİNYAL SİSTEMİ — ML Destekli CLI ║
+║   TRADE ANALİZ SİSTEMİ — ML Destekli CLI ║
 ╚══════════════════════════════════════════════╝
 
 Kullanım:
@@ -409,7 +409,7 @@ def interactive_menu():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Borsa Sinyal Sistemi — ML Destekli Terminal",
+        description="Trade Analiz Sistemi — ML Destekli Terminal",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Örnekler:

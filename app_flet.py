@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════
-#  BorsaSinyal Pro Terminal v3.1 — FLET EDITION
+#  TradeAnaliz Pro Terminal v3.1 — FLET EDITION
 #  %100 Python · Flutter tabanlı · Streamlit'ten çok daha tasarımsal
 # ══════════════════════════════════════════════════════════════════════
 
@@ -243,7 +243,7 @@ def make_stock_table_header():
 #  FLET UYGULAMASI
 # ══════════════════════════════════════════════════════════════════════
 
-class BorsaSinyalApp:
+class TradeAnalizApp:
     """Ana Flet uygulama sınıfı."""
 
     def __init__(self):
@@ -262,7 +262,7 @@ class BorsaSinyalApp:
         self.analiz_canli_timer = None
 
     def main(self, page: ft.Page):
-        page.title = "BorsaSinyal Pro · FLET"
+        page.title = "TradeAnaliz Pro · FLET"
         page.padding = 0
         page.spacing = 0
         page.bgcolor = BG0
@@ -281,8 +281,8 @@ class BorsaSinyalApp:
             content=ft.Row([
                 ft.Row([
                     ft.Text(
-                        spans=[ft.TextSpan("Borsa", style=ft.TextStyle(color=TXT1, weight="w800", size=22, letter_spacing=-1)),
-                               ft.TextSpan("Sinyal", style=ft.TextStyle(color=GOLD, weight="w800", size=22, letter_spacing=-1))],
+                        spans=[ft.TextSpan("Trade", style=ft.TextStyle(color=TXT1, weight="w800", size=22, letter_spacing=-1)),
+                               ft.TextSpan("Analiz", style=ft.TextStyle(color=GOLD, weight="w800", size=22, letter_spacing=-1))],
                     ),
                     ft.Text("Pro Terminal · v3.1 · FLET", font_family=FONT_MONO, size=8, color=TXT3, letter_spacing=3),
                 ], spacing=12, vertical_alignment="center"),
@@ -1220,17 +1220,17 @@ class BorsaSinyalApp:
 
 if __name__ == "__main__":
     try:
-        app = BorsaSinyalApp()
+        app = TradeAnalizApp()
         ft.app(
             target=app.main,
-            name="BorsaSinyal Pro",
+            name="TradeAnaliz Pro",
             view=ft.AppView.FLET_APP,
         )
     except Exception as e:
         # Fallback: düz web sunucusu
         print(f"Flet GUI başlatılamadı: {e}")
         print("Web tarayıcıda başlatılıyor...")
-        app = BorsaSinyalApp()
+        app = TradeAnalizApp()
         ft.app(
             target=app.main,
             view=ft.AppView.WEB_BROWSER,

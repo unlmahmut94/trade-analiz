@@ -38,7 +38,7 @@ def sec_8k_radar(sembol: str) -> list:
     if not SEC_AKTIF:
         return []
 
-    headers = {'User-Agent': 'BorsaSinyalPro Terminal (iletisim@borsasinyal.com)'}
+    headers = {'User-Agent': 'TradeAnalizPro Terminal (iletisim@tradeanaliz.com)'}
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={sembol}&type=8-K&owner=exclude&start=0&count=3&output=atom"
 
     sec_haberleri = []

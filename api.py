@@ -57,7 +57,7 @@ _rate_limit_lock = __import__('threading').Lock()
 
 # ── API Key yapılandırması ──
 API_KEY_GEREKLI = config_al("api.api_anahtari_gerekli", False)
-API_ANAHTARI = os.environ.get("BORSASINYAL_API_KEY", "")
+API_ANAHTARI = os.environ.get("TRADEANALIZ_API_KEY", "")
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # ══════════════════════════════════════════════════════════════════════
@@ -107,7 +107,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="BorsaSinyal Pro API",
+    title="TradeAnaliz Pro API",
     description="ML Destekli Çok Piyasalı Sinyal Sistemi - Güvenli Gateway",
     version="3.2.0",
     lifespan=lifespan
@@ -193,7 +193,7 @@ async def _api_anahtari_kontrol(api_key: Optional[str] = Security(API_KEY_HEADER
 @app.get("/")
 async def root():
     return {
-        "api": "BorsaSinyal Pro",
+        "api": "TradeAnaliz Pro",
         "version": "3.1.0",
         "status": "online",
         "timestamp": datetime.now().isoformat(),
@@ -462,7 +462,7 @@ async def webhook_tradingview(data: dict):
         "signal": "BUY",
         "price": 123.45,
         "interval": "1d",
-        "strategy": "BorsaSinyal"
+        "strategy": "TradeAnaliz"
     }
     """
     try:
@@ -498,7 +498,7 @@ async def webhook_tradingview(data: dict):
 if __name__ == "__main__":
     import uvicorn
     print("=" * 50)
-    print("  BorsaSinyal Pro API")
+    print("  TradeAnaliz Pro API")
     print("  http://localhost:8000")
     print("  http://localhost:8000/docs")
     print("=" * 50)
