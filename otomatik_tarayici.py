@@ -1,4 +1,4 @@
-import time
+﻿import time
 import threading
 import os
 import json
@@ -309,6 +309,9 @@ def surekli_tarama_dongusu():
             # Tur bitti mi?
             if batch_no >= toplam_batch:
                 batch_no = 0
+                if os.environ.get("GITHUB_ACTIONS") == "true":
+                    print("🏁 GitHub Actions tek tur tamamlandi, cikiliyor...")
+                    break
                 print(f"[{time.ctime()}] 🏁 TUR {tur_sayisi} TAMAMLANDI → Toplam {toplam_firsat} fırsat (bu oturum)")
                 bekleme = TAM_TUR_ARASI
                 print(f"[{time.ctime()}] ⏳ Yeni tur öncesi {bekleme}s dinlenme...")
@@ -329,8 +332,12 @@ def surekli_tarama_dongusu():
             bekleme = 5
             if batch_no >= toplam_batch:
                 batch_no = 0
+                if os.environ.get("GITHUB_ACTIONS") == "true":
+                    print("🏁 GitHub Actions tek tur tamamlandi, cikiliyor...")
+                    break
         
         time.sleep(bekleme)
 
 if __name__ == "__main__":
     surekli_tarama_dongusu()
+

@@ -1,4 +1,4 @@
-# ══════════════════════════════════════════════════════════════════════
+﻿# ══════════════════════════════════════════════════════════════════════
 #  mod_piyasa_takvimi.py — Piyasa Saat & Tatil Günü Kontrol Motoru
 #
 #  AMAÇ: Borsa açık/kapalı durumunu kontrol ederek gereksiz API
@@ -7,7 +7,7 @@
 #
 #  ALGORİTMA:
 #  ┌─────────────────────────────────────────────────────────────────┐
-#  │ 1. Bugünün gününü al (datetime.now())                          │
+#  │ 1. Bugünün gününü al (_tr_simdi())                          │
 #  │ 2. Hafta sonu kontrolü: Cumartesi/Pazar → KAPALI               │
 #  │ 3. Resmi tatil kontrolü (sabit liste + dinamik dini bayram)     │
 #  │ 4. Borsa seans saati kontrolü:                                 │
@@ -20,7 +20,8 @@
 # ══════════════════════════════════════════════════════════════════════
 
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
+def _tr_simdi(): return datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
 from typing import Dict, Tuple
 
 _logger = logging.getLogger("PiyasaTakvimi")
@@ -163,7 +164,7 @@ def borsa_acik_mi(piyasa: str = None, kontrol_zamani: datetime = None) -> Dict[s
     Dönüş: {'BIST': bool, 'NASDAQ': bool, 'KRIPTO': bool, 'neden': str}
     """
     if kontrol_zamani is None:
-        kontrol_zamani = datetime.now()
+        kontrol_zamani = _tr_simdi()
     
     simdi = kontrol_zamani
     bugun = simdi.date()
@@ -266,7 +267,7 @@ def seansa_kalan_sure(piyasa: str = "BIST") -> int:
     
     Dönüş: Dakika cinsinden süre (negatif = seans kapandı, süre geçti)
     """
-    simdi = datetime.now()
+    simdi = _tr_simdi()
     bugun = simdi.date()
     haftanin_gunu = simdi.weekday()
     saat_dakika = simdi.hour * 60 + simdi.minute
@@ -370,7 +371,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     durum = borsa_acik_mi()
-    print(f"\n📅 Bugün: {datetime.now().strftime('%Y-%m-%d %H:%M %A')}")
+    print(f"\n📅 Bugün: {_tr_simdi().strftime('%Y-%m-%d %H:%M %A')}")
     print(f"BIST:    {'🟢 AÇIK' if durum['BIST'] else '🔴 KAPALI'}")
     print(f"NASDAQ:  {'🟢 AÇIK' if durum['NASDAQ'] else '🔴 KAPALI'}")
     print(f"KRİPTO:  {'🟢 AÇIK' if durum['KRIPTO'] else '🔴 KAPALI'}")
