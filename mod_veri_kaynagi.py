@@ -193,7 +193,7 @@ class RateLimiter:
         
         self._token = 1.0
         self._son_yenileme = time.monotonic()
-        self._kilit = threading.Lock()
+        self._kilit = threading.RLock()
         
         # Günlük sayaç
         self._gunluk_sayac_tarih = datetime.now().date()
@@ -770,13 +770,38 @@ def hisse_turu_belirle(kod: str) -> str:
     return 'us'
 
 
+def _yahoo_kripto_sembolu(kod: str) -> str:
+    """Binance/ccxt kripto sembolünü Yahoo Finance formatına çevirir.
+
+    AERGO/USDT → AERGO-USD, AERGOUSDT → AERGO-USD, BTC-USD → BTC-USD.
+    Hisse kodları (THYAO.IS, AAPL) olduğu gibi döner.
+    """
+    ust = kod.upper().strip()
+    # Zaten Yahoo formatındaysa (XXX-USD) dokunma
+    if '-' in ust and ust.endswith('USD'):
+        return ust
+    # Binance formatı: XXX/USDT veya XXX/USD → XXX-USD
+    if '/' in ust:
+        base = ust.split('/')[0]
+        return f"{base}-USD" if base else kod
+    # Binance formatı: XXXUSDT veya XXXUSD → XXX-USD
+    if ust.endswith('USDT'):
+        base = ust[:-4]
+    elif ust.endswith('USD'):
+        base = ust[:-3]
+    else:
+        return kod
+    return f"{base}-USD" if base else kod
+
+
 def _yfinance_ile_cek(kod: str, period: str = "5y") -> pd.DataFrame:
     """yfinance ile veri çeker. Başarısız olursa None döner."""
     if not YF_AKTIF:
         return None
     
     try:
-        tk = yf.Ticker(kod)
+        sembol = _yahoo_kripto_sembolu(kod)
+        tk = yf.Ticker(sembol)
         df = tk.history(period=period)
         
         if df is None or df.empty or len(df) < 10:
@@ -790,7 +815,7 @@ def _yfinance_ile_cek(kod: str, period: str = "5y") -> pd.DataFrame:
                 try:
                     import time as _t
                     _t.sleep(0.3)  # rate-limit'i biraz bekleyip tekrar dene
-                    tk2 = yf.Ticker(kod)
+                    tk2 = yf.Ticker(sembol)
                     df2 = tk2.history(period=period)
                     if df2 is not None and not df2.empty and len(df2) >= 10:
                         return df2.dropna(subset=["Close"])
@@ -924,9 +949,26 @@ def _yahoo_pdr_ile_cek(kod: str, period: str = "5y") -> pd.DataFrame:
         return None
 
 
+# ── ccxt devre kesici (ISP/SNI engeli) ────────────────────────────────
+# Bazı bölgelerde (örn. Türkiye) kripto borsa API'ları ISP seviyesinde
+# engellenir ve tüm ccxt kaynakları aynı anda "SSL: WRONG_VERSION_NUMBER"
+# hatası verir. Ardışık birkaç ağ/SSL hatası sonrası ccxt tamamen atlanır;
+# böylece eğitim, engelli kaynaklarda dakikalarca beklemeden Yahoo
+# fallback'ine geçer. Devre kesici süreç yeniden başladığında sıfırlanır.
+_CCXT_ENGELLENDI = False
+_CCXT_ARDISIK_AG_HATASI = 0
+_CCXT_DEVRE_KESICI_ESIK = 4  # bu kadar ardışık ağ/SSL hatasında ccxt atlanır
+
+
 def _ccxt_ile_cek(kod: str, period: str = "5y", exchange_name: str = "binance") -> pd.DataFrame:
     """ccxt ile belirtilen borsadan kripto verisi çeker."""
+    global _CCXT_ENGELLENDI, _CCXT_ARDISIK_AG_HATASI
+    
     if not CCXT_AKTIF:
+        return None
+    
+    # Devre kesici açıksa ccxt'i tamamen atla (ISP engeli)
+    if _CCXT_ENGELLENDI:
         return None
     
     # Sadece kripto sembolleri için çalışır
@@ -966,11 +1008,29 @@ def _ccxt_ile_cek(kod: str, period: str = "5y", exchange_name: str = "binance") 
         if len(df) < 10:
             return None
         
+        # Başarılı istek → ağ hatası sayacını sıfırla
+        _CCXT_ARDISIK_AG_HATASI = 0
         _veri_logger.info(f"  ✓ {exchange_name.title()}: {kod} ({len(df)} satır)")
         return df
         
     except Exception as e:
-        _veri_logger.debug(f"  ✗ {exchange_name.title()} ({kod}): {str(e)[:100]}")
+        hata_str = str(e)
+        _veri_logger.debug(f"  ✗ {exchange_name.title()} ({kod}): {hata_str[:100]}")
+        # Ağ/SSL kaynaklı hataları say (borsa ISP tarafından engellenmiş olabilir)
+        ag_hatasi = any(kw in hata_str.lower() for kw in [
+            'ssl', 'wrong version', 'networkerror', 'timeout',
+            'connection', 'getaddrinfo', 'name or service', 'certificate'
+        ])
+        if ag_hatasi:
+            _CCXT_ARDISIK_AG_HATASI += 1
+            if _CCXT_ARDISIK_AG_HATASI >= _CCXT_DEVRE_KESICI_ESIK:
+                _CCXT_ENGELLENDI = True
+                _veri_logger.warning(
+                    "  ⚠ ccxt borsalarına erişim engellendi (SSL/SNI engeli) — "
+                    "Yahoo fallback kullanılacak"
+                )
+        else:
+            _CCXT_ARDISIK_AG_HATASI = 0
         return None
 
 
@@ -1017,7 +1077,8 @@ def _coingecko_ile_cek(kod: str, period: str = "5y") -> pd.DataFrame:
         return None
     
     try:
-        coin_id = kod_ust.replace('USDT', '').replace('USD', '').lower()
+        # AERGO/USDT → aergo (slash'ı ve quote'u temizle)
+        coin_id = kod_ust.split('/')[0].replace('USDT', '').replace('USD', '').lower()
         
         period_gun = {
             '1mo': 30, '3mo': 90, '6mo': 180,
@@ -1094,12 +1155,13 @@ def _yfinance_csv_ile_cek(kod: str, period: str = "5y") -> pd.DataFrame:
         i = interval_map.get(period, '1d')
         
         # YEREL VERİTABANI İLE HIZLI İNDİRME
+        sembol = _yahoo_kripto_sembolu(kod)
         try:
             from mod_yerel_veri import yerel_veriyi_getir_ve_guncelle
-            df = yerel_veriyi_getir_ve_guncelle(kod, limit_gun=90)
+            df = yerel_veriyi_getir_ve_guncelle(sembol, limit_gun=90)
         except Exception:
             # Yerel veritabanında hata olursa normal şekilde indir
-            df = yf.download(kod, period=p, interval=i, progress=False, auto_adjust=True)
+            df = yf.download(sembol, period=p, interval=i, progress=False, auto_adjust=True)
         
         if df is None or df.empty or len(df) < 10:
             return None

@@ -453,8 +453,16 @@ class TekTurEgitimMotoru:
             try:
                 sonuc = self._tek_hisse_egit(hisse)
                 if 'hata' in sonuc:
+                    # ── Soft hata (örn. "Yeterli veri yok"): başarısız say ve tekrar deneme listesine al ──
                     self.basarisiz_egitim += 1
                     _ml_logger.warning(f"  ⚠ [{idx}/{len(hisse_listesi)}] {hisse}: {sonuc['hata']}")
+                    self.checkpoint['basarisiz'] = self.basarisiz_egitim
+                    if hisse not in self.checkpoint['basarisiz_liste']:
+                        self.checkpoint['basarisiz_liste'].append(hisse)
+                    # Başarısız sembol asla 'egitilenler' listesine eklenmesin
+                    if hisse in self.checkpoint['egitilenler']:
+                        self.checkpoint['egitilenler'].remove(hisse)
+                    checkpoint_kaydet(self.checkpoint)
                 else:
                     self.basarili_egitim += 1
                     self.toplam_egitilen += 1
@@ -462,17 +470,14 @@ class TekTurEgitimMotoru:
                     metrikler = sonuc.get('metrikler', {})
                     acc = metrikler.get('validasyon', {}).get('accuracy', 0) * 100 if 'validasyon' in metrikler else 0
                     _ml_logger.info(f"  ✓ [{idx}/{len(hisse_listesi)}] {hisse:15s} | Rejim: {regime:8s} | Acc: %{acc:.1f}")
-                
-                # ✅ Her sembolden sonra checkpoint'i güncelle (anlık kayıt)
-                self.checkpoint['basarili'] = self.basarili_egitim
-                self.checkpoint['basarisiz'] = self.basarisiz_egitim
-                self.checkpoint['toplam_egitilen'] = self.toplam_egitilen
-                # v3.1: başarılı sembolü egitilenler'e ekle, başarısız listesinden çıkar
-                if hisse not in self.checkpoint['egitilenler']:
-                    self.checkpoint['egitilenler'].append(hisse)
-                if hisse in self.checkpoint['basarisiz_liste']:
-                    self.checkpoint['basarisiz_liste'].remove(hisse)
-                checkpoint_kaydet(self.checkpoint)
+                    # ✅ Başarılı sembolü egitilenler'e ekle, başarısız listesinden çıkar
+                    self.checkpoint['basarili'] = self.basarili_egitim
+                    self.checkpoint['toplam_egitilen'] = self.toplam_egitilen
+                    if hisse not in self.checkpoint['egitilenler']:
+                        self.checkpoint['egitilenler'].append(hisse)
+                    if hisse in self.checkpoint['basarisiz_liste']:
+                        self.checkpoint['basarisiz_liste'].remove(hisse)
+                    checkpoint_kaydet(self.checkpoint)
                 
             except Exception as e:
                 self.basarisiz_egitim += 1
@@ -481,6 +486,9 @@ class TekTurEgitimMotoru:
                 self.checkpoint['basarisiz'] = self.basarisiz_egitim
                 if hisse not in self.checkpoint['basarisiz_liste']:
                     self.checkpoint['basarisiz_liste'].append(hisse)
+                # Başarısız sembol 'egitilenler'den çıkar (yanlışlıkla eklenmiş olabilir)
+                if hisse in self.checkpoint['egitilenler']:
+                    self.checkpoint['egitilenler'].remove(hisse)
                 checkpoint_kaydet(self.checkpoint)
                 
             if self._kripto_mu(hisse):

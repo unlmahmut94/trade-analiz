@@ -9,27 +9,21 @@ echo     BORSA SINYAL PRO TERMINAL v3.2
 echo   ============================================
 echo.
 echo   Baslatilacak servisler:
-echo     1. Surekli Tarama Motoru
-echo     2. Streamlit Web Paneli (port 8503)
-echo     3. FastAPI REST API (port 8502)
+echo     1. Streamlit Web Paneli + Surekli Tarama Motoru (port 8503)
+echo     2. FastAPI REST API (port 8502)
 echo.
 echo   ============================================
 echo.
 
 :: ── ÖNCEKİ İŞLEMLERİ TEMİZLE ──
-echo   [0/3] Onceki Streamlit process'leri temizleniyor...
+echo   [0/2] Onceki Streamlit process'leri temizleniyor...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8503" ^| findstr "LISTENING"') do (
     taskkill /f /pid %%a >nul 2>&1
 )
 timeout /t 2 /nobreak >nul 2>&1
 
-:: ── TARAMA MOTORU ──
-echo   [1/3] Surekli tarama motoru baslatiliyor...
-start /B "" python -u otomatik_tarayici.py 2>&1
-timeout /t 3 /nobreak >nul 2>&1
-
-:: ── STREAMLIT WEB PANELİ ──
-echo   [2/3] Streamlit web paneli baslatiliyor...
+:: ── STREAMLIT WEB PANELİ (tarama motoru bunun içinde daemon thread olarak başlar) ──
+echo   [1/2] Streamlit web paneli + tarama motoru baslatiliyor...
 start /B "" python -m streamlit run app.py --server.port 8503 --server.headless=true
 
 echo   Streamlit hazir olana kadar bekleniyor (max 60 saniye)...
@@ -60,7 +54,7 @@ echo   Web tarayici aciliyor...
 start http://localhost:8503
 
 :: ── FASTAPI REST API ──
-echo   [3/3] FastAPI REST API baslatiliyor...
+echo   [2/2] FastAPI REST API baslatiliyor...
 start /B "" python -m uvicorn api:app --host 0.0.0.0 --port 8502
 
 echo.
@@ -72,8 +66,8 @@ echo     API Doks  : http://localhost:8502/docs
 echo     API       : http://localhost:8502
 echo   ============================================
 echo.
-echo   NOT: Bu pencere bilgi amaclidir.
-echo   Servisler arkada calismaya devam eder. Pencereleri kapatmayin.
+echo   NOT: Tarama motoru, web paneli acilinca arka planda
+echo   otomatik baslar. Bu pencereyi kapatmayin.
 echo.
 
 pause

@@ -202,14 +202,14 @@ def render_tarama_sekmesi():
         "Otomatik yakalanan fırsatlar · Teknik & Temel Analiz · YZ Formasyonları",
         bg_url="https://images.unsplash.com/photo-1642543492481-44e81e3914a1?q=80&w=1200&auto=format&fit=crop"
     )
-    tab1, tab_manuel, tab2 = st.tabs([
-        "🎯 YAKALANAN HİSSELER", "🔍 MANUEL TARAMA", "⚡ CANLI KRİPTO SCALP"
+    tab1, tab2, tab_manuel = st.tabs([
+        "🎯 HİSSELER", "🪙 COİNLER", "🔍 MANUEL TARAMA"
     ])
 
     with tab_manuel:
         filtreleme_paneli(hisse_analiz_paneli)
 
-    # ══ TAB 1: OTOMATİK YAKALANAN HİSSELER ══
+    # ══ TAB 1: HİSSELER ══
     with tab1:
         st.info(
             "🔬 Arka plan YZ motoru 7/24 piyasayı tarar. "
@@ -370,7 +370,7 @@ def render_tarama_sekmesi():
         except Exception as e:
             st.error(f"Veritabanı okunamadı: {e}")
 
-    # ══ TAB 2: CANLI KRİPTO SCALP ══
+    # ══ TAB 2: COİNLER ══
     with tab2:
         st.info(
             "🔌 Binance üzerinden saniyelik canlı verilerle kripto paralar taranıyor. "

@@ -28,25 +28,29 @@ from mod_dashboard import render_dashboard
 
 # ══════════════════════════════════════════════════════════════════════
 #  ARKA PLAN TARAMA MOTORU — Web paneli açık kaldığı sürece çalışır
-#  Modül seviyesinde flag sayesinde Streamlit her rerun'da tekrar başlatmaz
+#  st.cache_resource sayesinde Streamlit her rerun'da YENİ thread açmaz;
+#  tarama motoru süreç başına yalnızca 1 kez başlatılır.
 # ══════════════════════════════════════════════════════════════════════
-_TARAMA_MOTORU_BASLATILDI = False
 
-def _arka_plan_taramayi_baslat():
-    """Arka planda sürekli tarama motorunu (daemon thread) 1 kere başlatır."""
-    global _TARAMA_MOTORU_BASLATILDI
-    if _TARAMA_MOTORU_BASLATILDI:
-        return
-    _TARAMA_MOTORU_BASLATILDI = True
+@st.cache_resource
+def _tarama_motorunu_baslat():
+    """Sürekli tarama motorunu (daemon thread) süreç başına 1 kez başlatır."""
     try:
         from otomatik_tarayici import surekli_tarama_dongusu
         _th = threading.Thread(target=surekli_tarama_dongusu, daemon=True, name="scanner-daemon")
         _th.start()
         from mod_logger import yapilandirilmis_logger
         yapilandirilmis_logger("App").info("✅ Tarama motoru arka planda başlatıldı (daemon thread — web paneli açık kaldıkça çalışır)")
+        return True
     except Exception as e:
         from mod_logger import yapilandirilmis_logger
         yapilandirilmis_logger("App").warning(f"⚠️ Tarama motoru yüklenemedi: {e}")
+        return False
+
+
+def _arka_plan_taramayi_baslat():
+    """Web paneli açılınca tarama motorunu (1 kez) başlatır."""
+    _tarama_motorunu_baslat()
 
 from mod_tarama_sekmesi import render_tarama_sekmesi
 from mod_yz_arayuz import render_yz_arayuz
@@ -66,9 +70,6 @@ from mod_ortak import (
 from mod_config import config_al
 
 _app_logger = yapilandirilmis_logger("App")
-
-# Hemen başlat (logger tanımlandıktan sonra)
-_arka_plan_taramayi_baslat()
 
 # Çeviri modülü - güvenli import
 CEVIRI_AKTIF = guvenli_blok(
@@ -115,6 +116,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Tarama motorunu başlat — set_page_config() ilk Streamlit komutu olmalı,
+# bu yüzden bu çağrı ondan SONRA yapılır.
+_arka_plan_taramayi_baslat()
 
 # 🔥 OPTIMIZE: 5 dakikada bir sessiz arka plan veri yenileme.
 # Sayfa sönükleşmesini engellemek için sadece cache temizlenir,

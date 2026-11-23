@@ -21,6 +21,7 @@ from hisse_isimleri import HISSE_ISIMLERI
 from mod_veri_servisi import canli_fiyat_hizli
 from mod_grafik_yorumu import grafik_gorsel_analiz, canli_veriyi_guncelle, son_analizi_getir
 from grafik_html import veri_cek_ve_grafik_olustur, formasyon_ozeti_al, _teknik_gostergeleri_hesapla, tradingview_grafik_html, _formasyon_cizimleri, tradingview_veri_cek_ve_kaydet
+from grafik_tv import veri_cek_ve_lw_grafik_ac
 import webbrowser
 
 
@@ -616,7 +617,7 @@ class BorsaSinyalApp:
         analiz_input_panel = ft.Container(
             content=ft.Column([
                 ft.Text("📊 TRADINGVIEW TARZI GRAFİK", font_family=FONT_SORA, size=14, weight="w700", color=GREEN),
-                ft.Text("Hisse kodunu girip butona tıklayın — Mum, hacim, MACD, RSI, formasyonlar, Fibonacci hepsi bir arada.", font_family=FONT_SORA, size=11, color=TXT2),
+                ft.Text("Hisse kodunu girip butona tıklayın — TradingView görünümlü grafik açılır. '🤖 YZ İLE ÇİZ' butonu destek/direnç, Fibonacci ve formasyonları otomatik çizer.", font_family=FONT_SORA, size=11, color=TXT2),
                 ft.Container(height=6),
                 ft.Row([
                     self.analiz_hisse_input,
@@ -672,7 +673,7 @@ class BorsaSinyalApp:
 
 
     def _analiz_tv_ac(self, e):
-        """GERÇEK TradingView Widget HTML grafiği oluştur ve tarayıcıda aç."""
+        """TradingView görünümlü (Lightweight Charts) grafiği oluştur ve tarayıcıda aç."""
         sembol = self.analiz_hisse_kodu.strip().upper()
         if not sembol:
             self.analiz_tv_durum.value = "⚠️ Lütfen bir hisse kodu girin!"
@@ -689,20 +690,19 @@ class BorsaSinyalApp:
         elif "USDT" in sembol.upper() or "BTC" in sembol.upper() or "ETH" in sembol.upper():
             exchange = "BITSTAMP"
         
-        self.analiz_tv_durum.value = f"⏳ {sembol} için GERÇEK TradingView grafiği oluşturuluyor..."
+        self.analiz_tv_durum.value = f"⏳ {sembol} için TradingView grafiği oluşturuluyor..."
         self.analiz_tv_durum.color = GOLD
         self.analiz_tv_durum.update()
         
         def _tv_thread():
             try:
-                dosya = tradingview_veri_cek_ve_kaydet(
+                dosya = veri_cek_ve_lw_grafik_ac(
                     sembol=sembol,
-                    exchange=exchange,
                     period="6mo",
                     interval="1d",
                     otomatik_ac=True,
                 )
-                self.analiz_tv_durum.value = f"✅ Gerçek TradingView açıldı: {os.path.basename(dosya)}"
+                self.analiz_tv_durum.value = f"✅ TradingView grafiği açıldı (🤖 YZ İLE ÇİZ butonuyla): {os.path.basename(dosya)}"
                 self.analiz_tv_durum.color = GREEN
                 self.analiz_tv_durum.update()
                 
@@ -724,11 +724,11 @@ class BorsaSinyalApp:
                                     ft.Text(f['isim'], font_family=FONT_SORA, size=13, color=TXT1),
                                 ], spacing=8))
                             items.append(ft.Container(height=16))
-                            items.append(ft.Text("💡 Grafik tarayıcıda açıldı. Formasyonlar yan panelde.",
+                            items.append(ft.Text("💡 Grafik tarayıcıda açıldı. '🤖 YZ İLE ÇİZ' butonu destek/direnç, Fibonacci ve formasyonları grafiğe çizer.",
                                        font_family=FONT_SORA, size=11, color=TXT3, italic=True))
                             # Gemini AI kısa yorum ekle
                             items.append(ft.Container(height=8))
-                            items.append(ft.Text("🤖 Analiz için 'Görseli Analiz Et' butonunu kullanın",
+                            items.append(ft.Text("🤖 Ek metin yorumu için 'Görseli Analiz Et' butonunu da kullanabilirsiniz.",
                                        font_family=FONT_SORA, size=11, color=BLUE, italic=True))
                             self.analiz_sonuc_container.content = ft.Column(items, spacing=4)
                             self.analiz_sonuc_container.update()

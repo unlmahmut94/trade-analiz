@@ -9,6 +9,7 @@ from analiz import (
     macd_deger_hesapla
 )
 from grafik import ana_grafik, formasyon_bilgi_paneli, _formasyon_cizimleri
+from grafik_tv import tradingview_lw_html
 from mod_haberler import tum_sistemi_haber_tara
 from mod_teknik_analiz import teknik_analiz_paneli
 from hisse_isimleri import HISSE_ISIMLERI
@@ -217,7 +218,20 @@ def hisse_analiz_paneli(sembol: str, key_prefix: str = ""):
                         'scale': 2
                     }
                 }
-                st.plotly_chart(fig, use_container_width=True, config=pro_ayar)
+                # ── 📊 TRADINGVIEW GÖMÜLÜ GRAFİK (Ana) — üstteki "🤖 YZ İLE ÇİZ" butonu aynı grafiğe çizer ──
+                st.markdown(
+                    '<span class="section-label">📊 TradingView Grafiği · 🤖 YZ İle Çiz</span>',
+                    unsafe_allow_html=True
+                )
+                try:
+                    tv_html = tradingview_lw_html(data_grafik, sembol)
+                    st.components.v1.html(tv_html, height=1000, scrolling=True)
+                except Exception as tv_ex:
+                    st.error(f"TradingView grafiği oluşturulamadı: {tv_ex}")
+
+                # 🎛️ Eski Plotly grafiği (kopya/yedek) — isteğe bağlı
+                with st.expander("🎛️ Eski Plotly grafiğini göster (yedek)", expanded=False):
+                    st.plotly_chart(fig, use_container_width=True, config=pro_ayar)
 
                 # 📋 FORMASYON DETAY KARTLARI
                 if formasyon_sayisi > 0:

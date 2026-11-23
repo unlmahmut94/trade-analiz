@@ -10,6 +10,7 @@ import sqlite3
 import os
 import yfinance as yf
 import time
+import threading
 
 from analiz import rsi_serisi, tum_hisseleri_tara
 from hisseler_bist import BIST
@@ -23,6 +24,75 @@ except ImportError:
     HABER_AKTIF = False
 
 DB_YOLU = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_hafiza.db")
+
+# ── Arka plan canlı tarama durumu ──────────────────────────────────────
+# Streamlit rerun'larında kaybolmaz (modül önbellekte kalır). Tarama
+# thread'i buraya yazar, arayüz buradan okur. Böylece kullanıcı sekme
+# değiştirse bile tarama arka planda devam eder ve sonuçlar kaybolmaz.
+_CANLI_TARAMA = {
+    "calisiyor": False,   # thread çalışıyor mu
+    "bitti": False,       # thread az önce bitti mi (sonuçları bir kez göster)
+    "sonuclar": [],       # bulunan sinyaller (canlı + final)
+    "tamamlanan": 0,      # taranan sembol sayısı
+    "toplam": 0,          # toplam sembol sayısı
+    "hata": None,         # varsa hata mesajı
+}
+
+
+class _ArkaPlanProgress:
+    """tum_hisseleri_tara'nın progress_bar çağrısını paylaşılan duruma yazar."""
+    def progress(self, val):
+        try:
+            toplam = _CANLI_TARAMA.get("toplam", 0)
+            _CANLI_TARAMA["tamamlanan"] = int(float(val) * toplam)
+        except Exception:
+            pass
+
+
+class _ArkaPlanText:
+    """tum_hisseleri_tara'nın durum yazı çağrıları (arka planda yutulur)."""
+    def text(self, val):
+        pass
+    def info(self, val):
+        pass
+    def warning(self, val):
+        pass
+    def error(self, val):
+        pass
+    def success(self, val):
+        pass
+    def caption(self, val):
+        pass
+
+
+class _ArkaPlanEkran:
+    """canli_ekran.dataframe() çağrısını yakalar, bulunan sonuçları saklar."""
+    def dataframe(self, df, use_container_width=None, **kwargs):
+        try:
+            _CANLI_TARAMA["sonuclar"] = df.to_dict("records")
+        except Exception:
+            pass
+
+
+def _canli_tarama_worker(liste):
+    """Arka plan thread'i: piyasayı tarar, sonuçları paylaşılan duruma yazar."""
+    from analiz import tum_hisseleri_tara
+    try:
+        sonuclar = tum_hisseleri_tara(
+            liste, "1mo",
+            _ArkaPlanProgress(), _ArkaPlanText(),
+            max_workers=6,
+            canli_ekran=_ArkaPlanEkran(),
+        )
+        if sonuclar:
+            _CANLI_TARAMA["sonuclar"] = sonuclar
+        _CANLI_TARAMA["tamamlanan"] = _CANLI_TARAMA["toplam"]
+    except Exception as e:
+        _CANLI_TARAMA["hata"] = str(e)
+    finally:
+        _CANLI_TARAMA["calisiyor"] = False
+        _CANLI_TARAMA["bitti"] = True
+
 
 def filtreleme_paneli(hisse_analiz_paneli_fn):
     st.markdown("""
@@ -192,11 +262,32 @@ def filtreleme_paneli(hisse_analiz_paneli_fn):
         if "Hızlı" in tarama_kaynagi:
             txt.info("Veritabanındaki aktif sinyaller çekiliyor ve fiyatları güncelleniyor...")
             try:
-                from supabase_baglanti import supabase
-                response = supabase.table("ai_sinyaller").select("hisse, sinyal_tipi, giris_fiyati").eq("durum", "BEKLIYOR").order("id", desc=True).execute()
-                
-                if response.data:
-                    df = pd.DataFrame(response.data)
+                from supabase_baglanti import supabase, SUPABASE_AKTIF
+
+                kayitlar = []
+                # 1) Önce bulut Supabase'ten dene
+                if SUPABASE_AKTIF and supabase is not None:
+                    try:
+                        response = supabase.table("ai_sinyaller").select("hisse, sinyal_tipi, giris_fiyati").eq("durum", "BEKLIYOR").order("id", desc=True).execute()
+                        if response.data:
+                            kayitlar = response.data
+                    except Exception as sb_err:
+                        txt.warning(f"Bulut bağlantısı kurulamadı, yerel veritabanına dönülüyor ({sb_err})")
+
+                # 2) Bulut boşsa yerel SQLite'a bak (arka plan tarayıcısının yazdığı yer)
+                if not kayitlar:
+                    try:
+                        conn = sqlite3.connect(DB_YOLU)
+                        cur = conn.cursor()
+                        cur.execute("SELECT hisse, sinyal_tipi, giris_fiyati FROM ai_sinyaller WHERE durum LIKE 'BEK%IYOR' ORDER BY id DESC")
+                        satirlar = cur.fetchall()
+                        conn.close()
+                        kayitlar = [{"hisse": s[0], "sinyal_tipi": s[1], "giris_fiyati": s[2]} for s in satirlar]
+                    except Exception as db_err:
+                        txt.warning(f"Yerel veritabanı okunamadı: {db_err}")
+
+                if kayitlar:
+                    df = pd.DataFrame(kayitlar)
                     # Sütun isimlerini arayüzün beklediği formata çeviriyoruz
                     df = df.rename(columns={
                         "hisse": "Hisse",
@@ -218,6 +309,7 @@ def filtreleme_paneli(hisse_analiz_paneli_fn):
                         if not data.empty and 'Close' in data.columns:
                             for i, (idx, row) in enumerate(df.iterrows()):
                                 pb.progress((i + 1) / len(df))
+                                txt.caption(f"Fiyat güncelleniyor: %{int((i + 1) / len(df) * 100)} ({i + 1}/{len(df)})")
                                 hisse_kodu = row['Hisse']
                                 close_s = pd.Series(dtype=float)
                                 
@@ -251,36 +343,73 @@ def filtreleme_paneli(hisse_analiz_paneli_fn):
                 txt.error(f"Veri getirme hatası: {e}")
                 
         else:
-            if "BIST" in tarama_kaynagi:
-                liste = BIST
-                txt.info(f"🇹🇷 BIST piyasasındaki {len(liste)} hisse canlı olarak taranıyor...")
-            elif "Kripto" in tarama_kaynagi:
-                liste = [k.replace("USDT", "-USD") for k in KRIPTO_LISTESI]
-                txt.info(f"🪙 Kripto piyasasındaki {len(liste)} coin canlı olarak taranıyor...")
+            if _CANLI_TARAMA.get("calisiyor"):
+                txt.warning("⚠️ Zaten bir tarama devam ediyor. Lütfen bitmesini bekleyin.")
             else:
-                liste = NASDAQ
-                txt.info(f"🇺🇸 NASDAQ piyasasındaki {len(liste)} hisse canlı olarak taranıyor...")
-            
-            try:
-                canli_tablo = st.empty()
-                sonuclar = tum_hisseleri_tara(liste, "1mo", pb, txt, max_workers=6, canli_ekran=canli_tablo)
-                canli_tablo.empty()
-                
-                if sonuclar:
-                    df = pd.DataFrame(sonuclar)
-                    if "Değişim %" not in df.columns and "Degisim %" in df.columns:
-                        df.rename(columns={"Degisim %": "Değişim %"}, inplace=True)
-                    st.session_state.tarama_df = df
-                    txt.success(f"✅ Canlı piyasa taraması tamamlandı! Toplam {len(df)} hisse analiz edildi.")
+                if "BIST" in tarama_kaynagi:
+                    liste = BIST
+                elif "Kripto" in tarama_kaynagi:
+                    liste = [k.replace("USDT", "-USD") for k in KRIPTO_LISTESI]
                 else:
-                    st.session_state.tarama_df = pd.DataFrame()
-                    txt.warning("⚠️ Tarama yapıldı ancak hiçbir veriye ulaşılamadı (Bağlantı veya Rate-Limit sorunu olabilir).")
-            except Exception as e:
-                txt.error(f"Canlı tarama sırasında hata oluştu: {e}")
+                    liste = NASDAQ
 
-        time.sleep(1.5)
+                # Taramayı ARKA PLANDA başlat: arayüz kilitlenmez, sekme
+                # değiştirilebilir, bulunan sinyaller geldikçe aşağıya yazılır.
+                _CANLI_TARAMA["calisiyor"] = True
+                _CANLI_TARAMA["bitti"] = False
+                _CANLI_TARAMA["sonuclar"] = []
+                _CANLI_TARAMA["tamamlanan"] = 0
+                _CANLI_TARAMA["toplam"] = len(liste)
+                _CANLI_TARAMA["hata"] = None
+                threading.Thread(target=_canli_tarama_worker, args=(liste,), daemon=True).start()
+                txt.info(f"🚀 Tarama arka planda başlatıldı ({len(liste)} sembol). Sonuçlar geldikçe aşağıda görünür.")
+
+        time.sleep(0.5)
         pb.empty()
         txt.empty()
+
+    # ── ARKA PLAN TARAMASI CANLI GÖSTERİMİ ──────────────────────────────
+    if _CANLI_TARAMA.get("calisiyor"):
+        toplam = _CANLI_TARAMA.get("toplam", 0)
+        tamamlanan = _CANLI_TARAMA.get("tamamlanan", 0)
+        sonuclar = _CANLI_TARAMA.get("sonuclar", [])
+        oran = (tamamlanan / toplam) if toplam > 0 else 0.0
+
+        pb2 = st.progress(min(oran, 1.0))
+        st.caption(
+            f"⏳ Tarama sürüyor: **%{int(oran * 100)}** "
+            f"({tamamlanan}/{toplam} sembol) — bulunan sinyal: **{len(sonuclar)}**"
+        )
+
+        if sonuclar:
+            df_canli = pd.DataFrame(sonuclar)
+            kolonlar = [k for k in ["Hisse", "Son Fiyat", "Sinyal", "Değişim %", "Sinyal Skor"] if k in df_canli.columns]
+            if kolonlar:
+                if "Sinyal Skor" in df_canli.columns:
+                    df_canli = df_canli.sort_values(by="Sinyal Skor", ascending=False)
+                st.dataframe(df_canli[kolonlar], use_container_width=True)
+
+        time.sleep(1)
+        st.rerun()
+
+    # ── Tarama bitti, sonuçları oturuma aktar (bir kez) ─────────────────
+    if _CANLI_TARAMA.get("bitti"):
+        _CANLI_TARAMA["bitti"] = False
+        sonuclar = _CANLI_TARAMA.get("sonuclar", [])
+        hata = _CANLI_TARAMA.get("hata")
+        if hata:
+            st.session_state.tarama_df = pd.DataFrame()
+            st.error(f"⚠️ Tarama sırasında hata oluştu: {hata}")
+        elif sonuclar:
+            df = pd.DataFrame(sonuclar)
+            if "Değişim %" not in df.columns and "Degisim %" in df.columns:
+                df.rename(columns={"Degisim %": "Değişim %"}, inplace=True)
+            st.session_state.tarama_df = df
+            st.success(f"✅ Tarama tamamlandı! Toplam {len(df)} sonuç bulundu.")
+        else:
+            st.session_state.tarama_df = pd.DataFrame()
+            st.warning("⚠️ Tarama yapıldı ancak hiçbir sinyal bulunamadı.")
+        _CANLI_TARAMA["sonuclar"] = []
 
     # ── SONUÇLARI FİLTRELEME VE GÖSTERME KISMI ──
     df = st.session_state.get("tarama_df", None)

@@ -4,13 +4,14 @@ import os
 import json
 import traceback
 import sys
+from datetime import datetime
 from analiz import tum_hisseleri_tara
 from hisseler_bist import BIST
 from hisseler_nasdaq import NASDAQ
 from hisseler_sp500 import SP500
 from hisseler_kripto import KRIPTO_LISTESI
 from mod_hafiza import sinyal_kaydet, bekleyenleri_kontrol_et
-from supabase_baglanti import supabase
+from supabase_baglanti import supabase, SUPABASE_AKTIF
 from collections import deque
 import time
 
@@ -145,20 +146,27 @@ def firsat_kaydet(row):
     
     stop_fiyat = round(fiyat * (1 - stop_yuzde), 2)
     
- # Bulut Supabase tablosuna anında yazıyoruz
+    # 1) Yerel SQLite'a yaz (Telegram bildirimi de bu fonksiyon içinde yapılır)
     try:
-        yeni_kayit = {
-            "tarih": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "hisse": hisse,
-            "sinyal_tipi": "GUCLU AL",
-            "giris_fiyati": float(fiyat),
-            "hedef_fiyat": float(hedef_fiyat),
-            "stop_fiyat": float(stop_fiyat),
-            "durum": "BEKLIYOR"
-        }
-        supabase.table("ai_sinyaller").insert(yeni_kayit).execute()
-    except Exception as sb_err:
-        print(f"  ⚠ Supabase bulut kayıt hatası: {sb_err}")   
+        sinyal_kaydet(hisse, "GUCLU AL", fiyat, hedef_fiyat, stop_fiyat)
+    except Exception as lk_err:
+        print(f"  ⚠ Yerel kayıt hatası ({hisse}): {lk_err}")
+
+    # 2) Bulut Supabase tablosuna anında yaz (kimlik bilgileri varsa)
+    if SUPABASE_AKTIF and supabase is not None:
+        try:
+            yeni_kayit = {
+                "tarih": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "hisse": hisse,
+                "sinyal_tipi": "GUCLU AL",
+                "giris_fiyati": float(fiyat),
+                "hedef_fiyat": float(hedef_fiyat),
+                "stop_fiyat": float(stop_fiyat),
+                "durum": "BEKLIYOR"
+            }
+            supabase.table("ai_sinyaller").insert(yeni_kayit).execute()
+        except Exception as sb_err:
+            print(f"  ⚠ Supabase bulut kayıt hatası: {sb_err}")
     print(f"  🔥 FIRSAT: {hisse} | Giriş: {fiyat:.2f} | Hedef: {hedef_fiyat:.2f} (%{hedef_yuzde*100:.1f}) | Stop: {stop_fiyat:.2f} (%{stop_yuzde*100:.1f} · ATR×{atr_carpani})")
     return True
 
@@ -177,6 +185,10 @@ def tek_batch_tara(batch_liste, batch_no, toplam_batch, bas_idx, son_idx):
         dummy = DummyUI()
         sonuclar = tum_hisseleri_tara(batch_liste, "1mo", dummy, dummy, max_workers=MAX_WORKERS)
         kaydedilen = 0
+        if sonuclar is not None:
+            analiz_edilemeyen = len(batch_liste) - len(sonuclar)
+            if analiz_edilemeyen > 0:
+                print(f"[{time.ctime()}] ⚠ {analiz_edilemeyen} hisse veri çekilemedi (rate-limit/delisted/50 bar altı olabilir)")
         
         if sonuclar:
             for row in sonuclar:
@@ -196,19 +208,6 @@ def tek_batch_tara(batch_liste, batch_no, toplam_batch, bas_idx, son_idx):
     finally:
         with _tarama_lock:
             _tarama_devam_ediyor = False
-def surekli_tarama_dongusu():
-    # 1. Kriptoları ana listeden AYIR
-    from hisseler_kripto import KRIPTO_LISTESI
-    kripto_semboller = [k.replace("USDT", "").lower() + "usdt" for k in KRIPTO_LISTESI]
-    
-    # 2. WebSocket'i Arka Planda Başlat (Kriptolar artık kendi kendine çalışacak)
-    from mod_websocket import websocket_akisi_baslat
-    print(f"[{time.ctime()}] ⚡ Kripto WebSocket Motoru Başlatılıyor...")
-    websocket_akisi_baslat(kripto_semboller, callback=kripto_canli_akis_dinleyicisi, max_sembol=50)
-
-    # 3. Yavaş tarama döngüsüne SADECE hisseleri (BIST, NASDAQ, SP500) ver
-    ham_liste = list(set(BIST + NASDAQ + SP500))
-
 def surekli_tarama_dongusu():
     """Ana sürekli tarama döngüsü - batch'ler halinde durmadan tarar."""
     # TÜM hisseler + kriptolar (tekrarsız)
