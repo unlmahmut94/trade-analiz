@@ -5,6 +5,26 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+# Piyasa listelerini içe aktar (Piyasa türünü tespit etmek için)
+try:
+    from hisseler_bist import BIST
+except ImportError:
+    BIST = []
+
+try:
+    from hisseler_nasdaq import NASDAQ
+except ImportError:
+    NASDAQ = []
+
+try:
+    from hisseler_sp500 import SP500
+except ImportError:
+    SP500 = []
+
+try:
+    from hisseler_kripto import KRIPTO_LISTESI
+except ImportError:
+    KRIPTO_LISTESI = []
 # Telegram modulunu guvenli cagir
 try:
     from mod_telegram import telegram_mesaj_gonder
@@ -100,7 +120,31 @@ def _is_kripto_sembol(kod: str) -> bool:
         return False
     ust = kod.upper().strip()
     return ('USDT' in ust or 'USD' in ust or 'BTC' in ust) and '.IS' not in ust
-
+def _piyasa_turu_bul(hisse: str) -> str:
+    """Sembolun hangi piyasaya ait oldugunu dondurur."""
+    ust = hisse.upper().strip()
+    
+    # 1. Coin kontrolu
+    kripto_temiz = [k.upper().replace("USDT", "-USD") for k in KRIPTO_LISTESI]
+    if _is_kripto_sembol(ust) or ust in [k.upper() for k in KRIPTO_LISTESI] or ust in kripto_temiz:
+        return "🪙 COIN (KRİPTO)"
+        
+    # 2. BIST kontrolu
+    if ust.endswith(".IS") or ust in [b.upper() for b in BIST]:
+        return "🇹🇷 BIST 100"
+        
+    # 3. NASDAQ ve S&P 500 kontrolu
+    nasdaq_set = {n.upper() for n in NASDAQ}
+    sp500_set = {s.upper() for s in SP500}
+    
+    if ust in nasdaq_set and ust in sp500_set:
+        return "🇺🇸 NASDAQ / S&P 500"
+    elif ust in nasdaq_set:
+        return "🇺🇸 NASDAQ"
+    elif ust in sp500_set:
+        return "🇺🇸 S&P 500"
+        
+    return "🌐 ABD BORSASI"
 # ══════════════════════════════════════════════════════════════════════
 #  CCXT BINANCE ILE KRIPTO VERI CEKME
 # ══════════════════════════════════════════════════════════════════════
@@ -303,6 +347,7 @@ def _telegram_bildirim_gonder(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop
         
         mesaj = (
             f"<b>YENI FIRSAT YAKALANDI!</b>\n\n"
+            f"Piyasa: <b>{piyasa_etiketi}</b>\n"
             f"Sembol: <b>{hisse}</b>\n"
             f"Sinyal: <b>{sinyal_tipi}</b>\n"
             f"Giris: {giris_fiyat:.2f}\n"
