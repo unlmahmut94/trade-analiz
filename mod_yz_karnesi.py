@@ -271,18 +271,22 @@ def render_yz_karnesi():
             st.rerun()
 
     # ═══ VERİ ═══ 🔥 PERF: SQLite sorgusunu 2dk cache'le — sekme geçişlerinde tekrar okunmaz
-    @st.cache_data(ttl=120, show_spinner=False)
-    def _sinyal_verisi_oku():
+    @st.cache_data(ttl=300, show_spinner=False)
+    def _arsiv_verisi_oku():
         try:
             conn = sqlite3.connect(DB_ISMI)
-            df = pd.read_sql_query("SELECT * FROM ai_sinyaller ORDER BY id DESC", conn)
+            c = conn.cursor()
+            c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_sinyaller_arsiv'")
+            if not c.fetchone():
+                conn.close()
+                return pd.DataFrame()
+            df_arsiv = pd.read_sql_query("SELECT * FROM ai_sinyaller_arsiv ORDER BY id DESC", conn)
             conn.close()
-            return df
-        except Exception as e:
-            st.error(f"🚨 Veritabanı Hatası: {e}")
+            return df_arsiv
+        except Exception:
             return pd.DataFrame()
-    
-    df = _sinyal_verisi_oku()
+
+    df_arsiv = _arsiv_verisi_oku()
 
     if df.empty:
         st.markdown("""
