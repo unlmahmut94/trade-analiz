@@ -48,8 +48,10 @@
     "QNBFB.IS",
     "QNBFL.IS",
     "SAFM",
+    "SAGA-USD",
     "SATS-USD",
     "SPNS",
+    "SPR",
     "STG-USD",
     "STOR",
     "TARO",
@@ -58,7 +60,7 @@
     "ZK-USD",
     "ZRO-USD"
   ],
-  "son_guncelleme": "2026-11-23 23:07:30",
-  "toplam_olu": 57,
+  "son_guncelleme": "2026-11-23 23:19:50",
+  "toplam_olu": 59,
   "not": "Bu semboller delisted/kote dışı olduğu için tarama listelerinden otomatik çıkarılmıştır."
 }

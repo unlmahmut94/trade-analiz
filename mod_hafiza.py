@@ -329,6 +329,7 @@ def _telegram_bildirim_gonder(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop
     Son 24 saatte ayni hisseye ayni tipte bildirim gidip gitmedigini kontrol eder.
     """
     son_24_saat = (datetime.datetime.now() - datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+    piyasa_etiketi = _piyasa_turu_bul(hisse)  # <--- BU SATIRI EKLE
     try:
         kontrol_conn = sqlite3.connect(DB_YOLU)
         kc = kontrol_conn.cursor()
@@ -345,6 +346,20 @@ def _telegram_bildirim_gonder(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop
             print(f"[TELEGRAM] {hisse} icin son 24 saatte zaten GUCLU AL mesaji gonderilmis - Telegram mesaji atlaniyor")
             return
         
+        mesaj = (
+            f"<b>YENI FIRSAT YAKALANDI!</b>\n\n"
+            f"Piyasa: <b>{piyasa_etiketi}</b>\n"
+            f"Sembol: <b>{hisse}</b>\n"
+            f"Sinyal: <b>{sinyal_tipi}</b>\n"
+            f"Giris: {giris_fiyat:.2f}\n"
+            f"Hedef: {hedef_fiyat:.2f}\n"
+            f"Stop: {stop_fiyat:.2f}"
+        )
+        telegram_mesaj_gonder(mesaj)
+        print(f"[TELEGRAM] {hisse} ({piyasa_etiketi}) GUCLU AL mesaji gonderildi")
+        
+    except Exception as e:
+        print(f"[TELEGRAM] Kontrol hatasi: {e} - yine de mesaj gonderiliyor")
         mesaj = (
             f"<b>YENI FIRSAT YAKALANDI!</b>\n\n"
             f"Piyasa: <b>{piyasa_etiketi}</b>\n"
@@ -387,7 +402,7 @@ def bekleyenleri_kontrol_et():
             conn.close()
             return 0
 
-        c.execute("SELECT id, hisse, hedef_fiyat, stop_fiyat, giris_fiyati, tarih FROM ai_sinyaller WHERE durum LIKE 'BEK%IYOR'")
+        c.execute("SELECT id, hisse, hedef_fiyat, stop_fiyat, giris_fiyati, tarih, sinyal_tipi FROM ai_sinyaller WHERE durum LIKE 'BEK%IYOR'")
         bekleyenler = c.fetchall()
 
         if not bekleyenler:
@@ -398,8 +413,7 @@ def bekleyenleri_kontrol_et():
         kapanan = 0
 
         for islem in bekleyenler:
-            islem_id, hisse, hedef, stop, giris_fiyat, sinyal_tarihi = islem
-            
+            islem_id, hisse, hedef, stop, giris_fiyat, sinyal_tarihi, sinyal_tipi = islem            
             try:
                 try:
                     sinyal_dt = datetime.datetime.strptime(sinyal_tarihi, "%Y-%m-%d %H:%M:%S")
@@ -512,7 +526,16 @@ def bekleyenleri_kontrol_et():
                     print(f"POZISYON KAPANDI: {hisse} -> {yeni_durum} (Kapanis: {kapanis_fiyat:.2f})")
                     kapanan += 1
                     
-                    kapanis_mesaji = f"<b>ISLEM KAPANDI!</b>\n\nSembol: <b>{hisse}</b>\nDurum: <b>{yeni_durum}</b>\nKapanis Fiyati: {kapanis_fiyat:.2f}"
+                    piyasa_etiketi = _piyasa_turu_bul(hisse)
+                    islem_turu = sinyal_tipi if sinyal_tipi else "GUCLU AL"
+                    kapanis_mesaji = (
+                        f"<b>ISLEM KAPANDI!</b>\n\n"
+                        f"Piyasa: <b>{piyasa_etiketi}</b>\n"
+                        f"Sembol: <b>{hisse}</b>\n"
+                        f"Islem Tipi: <b>{islem_turu}</b>\n"
+                        f"Durum: <b>{yeni_durum}</b>\n"
+                        f"Kapanis Fiyati: {kapanis_fiyat:.2f}"
+                    )
                     telegram_mesaj_gonder(kapanis_mesaji)
 
             except Exception as e:
