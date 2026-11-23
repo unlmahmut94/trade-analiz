@@ -40,6 +40,7 @@
     "IPG",
     "K",
     "KERVT.IS",
+    "MATIC-USD",
     "MC-USD",
     "MEW-USD",
     "MIME",
@@ -50,10 +51,12 @@
     "MRO",
     "MRUS",
     "NEIRO-USD",
+    "NFP-USD",
     "OMNI-USD",
     "PENGU-USD",
     "PEPE-USD",
     "PFPT",
+    "PIXEL-USD",
     "POPCAT-USD",
     "PORTAL-USD",
     "PRIME-USD",
@@ -77,7 +80,7 @@
     "ZK-USD",
     "ZRO-USD"
   ],
-  "son_guncelleme": "2026-11-24 01:04:50",
-  "toplam_olu": 76,
+  "son_guncelleme": "2026-11-24 01:06:55",
+  "toplam_olu": 79,
   "not": "Bu semboller delisted/kote dışı olduğu için tarama listelerinden otomatik çıkarılmıştır."
 }
