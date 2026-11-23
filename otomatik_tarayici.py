@@ -18,6 +18,15 @@ import time
 # Kripto fiyat geçmişini bellekte tutacak hafıza (Son 5 dakika)
 _kripto_bellek = {} 
 
+
+def _piyasa_izinli_mi(sembol):
+    s = str(sembol or "").upper()
+    if s.endswith(".IS") or s.startswith("BIST:"):
+        return bool(borsa_acik_mi("BIST"))
+    if s.endswith(("-USD", "-USDT", "USDT", "/USDT")):
+        return bool(borsa_acik_mi("KRIPTO"))
+    return bool(borsa_acik_mi("NASDAQ"))
+
 def kripto_canli_akis_dinleyicisi(sembol, fiyat, hacim, zaman_ms):
     """WebSocket'ten saniyede bir akan veriyi dinler ve anında analiz eder."""
     simdi = time.time()

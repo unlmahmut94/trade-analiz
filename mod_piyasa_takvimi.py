@@ -134,125 +134,33 @@ def _abd_tatil_gunleri(yil: int) -> list:
 #  ANA KONTROL FONKSİYONLARI
 # ══════════════════════════════════════════════════════════════════════
 
-def borsa_acik_mi(piyasa: str = None, kontrol_zamani: datetime = None) -> Dict[str, bool]:
-    """
-    Tüm piyasaların veya belirli bir piyasanın açık olup olmadığını kontrol eder.
-    
-    Algoritma:
-    ┌──────────────────────────────────────────────────────────────┐
-    │ BIST için:                                                  │
-    │   1. Hafta sonu mu? (Cmt/Pzr) → KAPALI                     │
-    │   2. Resmi/dini tatil mi? → KAPALI                         │
-    │   3. Seans saati dışında mı? (10-13, 14-18) → KAPALI      │
-    │   4. Öğle arası mı? (13:00-14:00) → KAPALI                │
-    │   5. Hiçbiri değilse → AÇIK                                 │
-    │                                                              │
-    │ NASDAQ/NYSE için:                                           │
-    │   1. Hafta sonu mu? → KAPALI                               │
-    │   2. ABD resmi tatili mi? → KAPALI                         │
-    │   3. Seans dışı mı? (EST 09:30-16:00) → KAPALI            │
-    │   4. Hiçbiri değilse → AÇIK                                 │
-    │                                                              │
-    │ KRİPTO için:                                                │
-    │   Her zaman AÇIK (7/24)                                     │
-    └──────────────────────────────────────────────────────────────┘
-    
-    Parametreler:
-        piyasa: 'BIST', 'NASDAQ', 'KRIPTO', None (hepsi)
-        kontrol_zamani: datetime (None = şu an)
-    
-    Dönüş: {'BIST': bool, 'NASDAQ': bool, 'KRIPTO': bool, 'neden': str}
-    """
-    if kontrol_zamani is None:
-        kontrol_zamani = _tr_simdi()
-    
-    simdi = kontrol_zamani
-    bugun = simdi.date()
-    haftanin_gunu = simdi.weekday()  # 0=Pzt, 6=Pzr
-    saat = simdi.hour + simdi.minute / 60.0
-    
-    sonuc = {'KRIPTO': True, 'neden': ''}
-    
-    # ── BIST Kontrolü ──
-    bist_acik = True
-    bist_neden = ""
-    
-    # Hafta sonu
-    if haftanin_gunu >= 5:  # Cumartesi(5) veya Pazar(6)
-        bist_acik = False
-        bist_neden = "Hafta sonu"
-    
-    # Resmi tatil kontrolü
-    elif (bugun.day, bugun.month) in TURKIYE_SABIT_TATILLER:
-        bist_acik = False
-        bist_neden = "Resmi tatil"
-    
-    # Dini tatil kontrolü
-    elif bugun.year in TURKIYE_DINI_TATILLER:
-        for bas, son in TURKIYE_DINI_TATILLER[bugun.year]:
-            if bas <= bugun <= son:
-                bist_acik = False
-                bist_neden = "Dini bayram"
-                break
-    
-    # Seans saati kontrolü
-    elif bist_acik:
-        if saat < 10.0:
-            bist_acik = False
-            bist_neden = f"Seans henüz açılmadı (açılış: 10:00, şu an: {simdi.strftime('%H:%M')})"
-        elif 13.0 <= saat < 14.0:
-            bist_acik = False
-            bist_neden = "Öğle arası (13:00-14:00)"
-        elif saat >= 18.0:
-            bist_acik = False
-            bist_neden = f"Seans kapandı (kapanış: 18:00, şu an: {simdi.strftime('%H:%M')})"
-    
-    sonuc['BIST'] = bist_acik
-    if not bist_acik and bist_neden:
-        sonuc['neden'] = f"BIST: {bist_neden}"
-    
-    # ── NASDAQ/NYSE Kontrolü ──
-    nasdaq_acik = True
-    nasdaq_neden = ""
-    
-    # EST saatine çevir (UTC-5, yaz saati UTC-4)
-    # Basitleştirilmiş: Mart-Kasım arası EDT (UTC-4), diğer zaman EST (UTC-5)
-    is_dst = 3 <= bugun.month <= 10
-    est_offset = -4 if is_dst else -5
-    est_saat = saat + est_offset + 3  # Türkiye UTC+3
-    
-    # Hafta sonu
-    if haftanin_gunu >= 5:
-        nasdaq_acik = False
-        nasdaq_neden = "Hafta sonu"
-    
-    # ABD tatili
-    elif bugun in _abd_tatil_gunleri(bugun.year):
-        nasdaq_acik = False
-        nasdaq_neden = "ABD resmi tatili"
-    
-    # Seans saati (EST 09:30-16:00 → TR 16:30-23:00 yaz, 17:30-00:00 kış)
-    elif nasdaq_acik:
-        est_now = est_saat
-        if est_now < 9.5:
-            nasdaq_acik = False
-            nasdaq_neden = "NASDAQ seansı henüz açılmadı"
-        elif est_now >= 16.0:
-            nasdaq_acik = False
-            nasdaq_neden = "NASDAQ seansı kapandı"
-    
-    sonuc['NASDAQ'] = nasdaq_acik
-    if not nasdaq_acik and nasdaq_neden:
-        if sonuc['neden']:
-            sonuc['neden'] += " | "
-        sonuc['neden'] += f"NASDAQ: {nasdaq_neden}"
-    
-    # Belirli bir piyasa sorulmuşsa sadece onu döndür
-    if piyasa:
-        sonuc[piyasa] = sonuc.get(piyasa, False)
-    
-    return sonuc
+def borsa_acik_mi(piyasa=None):
+    """BIST: Hafta ici 10:00-18:00, NASDAQ: Hafta ici 17:30-00:00 (UTC+3), KRIPTO: 7/24."""
+    simdi = _tr_simdi()
+    hafta_ici = simdi.weekday() < 5
+    dakika = simdi.hour * 60 + simdi.minute
 
+    bist_acik = hafta_ici and (10 * 60 <= dakika < 18 * 60)
+    nasdaq_acik = hafta_ici and ((17 * 60 + 30 <= dakika) or (dakika < 0 * 60))
+    kripto_acik = True
+
+    nedenler = []
+    if not bist_acik:
+        nedenler.append("BIST: Borsa kapali (10:00-18:00)")
+    if not nasdaq_acik:
+        nedenler.append("NASDAQ: Seans kapali (17:30-00:00)")
+
+    durum = {
+        "BIST": bist_acik,
+        "NASDAQ": nasdaq_acik,
+        "KRIPTO": kripto_acik,
+        "neden": " | ".join(nedenler) if nedenler else "Tum piyasalar acik",
+    }
+    if piyasa:
+        key = str(piyasa).upper()
+        if key in durum:
+            return durum[key]
+    return durum
 
 def seansa_kalan_sure(piyasa: str = "BIST") -> int:
     """
