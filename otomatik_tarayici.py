@@ -114,7 +114,13 @@ def firsat_kaydet(row):
     hisse = row['Hisse']
     fiyat = row['Son Fiyat']
     hedef_yuzde, piyasa_tipi = piyasa_tipine_gore_esikler(hisse)
-    
+    # ── PİYASA KAPALIYSA SİNYAL KAYDETME ────────────────────────────
+    if PIYASA_TAKVIMI_AKTIF:
+        p_durum = borsa_acik_mi()
+        if piyasa_tipi == "bist" and not p_durum.get("BIST", False):
+            return False
+        if piyasa_tipi in ("nasdaq", "sp500") and not p_durum.get("NASDAQ", False):
+            return False
     hedef_fiyat = round(fiyat * (1 + hedef_yuzde), 2)
     
     # 🔥 ATR TABANLI DİNAMİK STOP-LOSS
@@ -210,19 +216,22 @@ def tek_batch_tara(batch_liste, batch_no, toplam_batch, bas_idx, son_idx):
             _tarama_devam_ediyor = False
 def surekli_tarama_dongusu():
     """Ana sürekli tarama döngüsü - batch'ler halinde durmadan tarar."""
-    # TÜM hisseler + kriptolar (tekrarsız)
-    kripto_yf = [k.replace("USDT", "-USD") for k in KRIPTO_LISTESI]
-    ham_liste = list(set(BIST + NASDAQ + SP500 + kripto_yf))
-    
-    # ── Ölü havuz filtresi: başlangıçta temizle ─────────────────────
-    if OLI_HAVUZ_AKTIF:
-        tum_liste = dead_listeyi_temizle(ham_liste)
-        dead_set = dead_liste_yukle()
-        if dead_set:
-            print(f"  💀 {len(dead_set)} ölü/delisted hisse listeden filtrelendi")
-    else:
-        tum_liste = ham_liste
-    
+    def _acik_piyasa_listesi_getir():
+        kripto_yf = [k.replace("USDT", "-USD") for k in KRIPTO_LISTESI]
+        if not PIYASA_TAKVIMI_AKTIF:
+            return list(set(BIST + NASDAQ + SP500 + kripto_yf))
+        durum = borsa_acik_mi()
+        aktif = []
+        if durum.get("BIST", False):
+            aktif.extend(BIST)
+        if durum.get("NASDAQ", False):
+            aktif.extend(NASDAQ + SP500)
+        if durum.get("KRIPTO", True):
+            aktif.extend(kripto_yf)
+        temiz = list(set(aktif))
+        return dead_listeyi_temizle(temiz) if OLI_HAVUZ_AKTIF else temiz
+
+    tum_liste = _acik_piyasa_listesi_getir()    
     toplam = len(tum_liste)
     toplam_batch = (toplam + BATCH_SIZE - 1) // BATCH_SIZE
     tahmini_tur_suresi = toplam_batch * (BATCH_ARASI // 60) + (TAM_TUR_ARASI // 60)
@@ -269,6 +278,9 @@ def surekli_tarama_dongusu():
             
             # Her yeni tur başında bekleyen pozisyonları kontrol et
             if batch_no == 0:
+                tum_liste = _acik_piyasa_listesi_getir()
+                toplam = len(tum_liste)
+                toplam_batch = max(1, (toplam + BATCH_SIZE - 1) // BATCH_SIZE)
                 tur_sayisi += 1
                 print(f"\n{'─'*55}")
                 print(f"[{time.ctime()}] 🔄 TUR {tur_sayisi} BAŞLADI")

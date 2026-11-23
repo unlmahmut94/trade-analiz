@@ -11,9 +11,11 @@
     "COOKIE-USD",
     "COUP",
     "CSWI",
+    "CTRA",
     "DAWN",
     "DGKLB.IS",
     "DISCA",
+    "DOG-USD",
     "EXAI",
     "FGEN",
     "FUV",
@@ -56,6 +58,7 @@
     "SPR",
     "STG-USD",
     "STOR",
+    "SUI-USD",
     "TAO-USD",
     "TARO",
     "UNI-USD",
@@ -63,7 +66,7 @@
     "ZK-USD",
     "ZRO-USD"
   ],
-  "son_guncelleme": "2026-11-23 23:35:08",
-  "toplam_olu": 62,
+  "son_guncelleme": "2026-11-23 23:57:07",
+  "toplam_olu": 65,
   "not": "Bu semboller delisted/kote dışı olduğu için tarama listelerinden otomatik çıkarılmıştır."
 }

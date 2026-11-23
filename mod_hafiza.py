@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import datetime
 import os
 import numpy as np
@@ -30,6 +30,12 @@ try:
     from mod_telegram import telegram_mesaj_gonder
 except ImportError:
     def telegram_mesaj_gonder(mesaj): pass
+
+try:
+    from mod_piyasa_takvimi import borsa_acik_mi
+    PIYASA_TAKVIMI_AKTIF = True
+except ImportError:
+    PIYASA_TAKVIMI_AKTIF = False
 
 # Binance/ccxt icin (kripto sinyalleri kontrol etmek icin gerekli)
 try:
@@ -424,28 +430,49 @@ def bekleyenleri_kontrol_et():
                 
                 # Zaman asimi kontrolu: kripto 9 gun, hisse 30 gun
                 is_kripto = _is_kripto_sembol(hisse)
+                
+                # 1) Borsa kapalıysa işlem kapatma!
+                if PIYASA_TAKVIMI_AKTIF and not is_kripto:
+                    p_durum = borsa_acik_mi()
+                    if hisse.upper().endswith(".IS") and not p_durum.get("BIST", False):
+                        continue
+                    elif not hisse.upper().endswith(".IS") and not p_durum.get("NASDAQ", False):
+                        continue
+
                 max_bekleme = MAX_BEKLEME_KRIPTO if is_kripto else MAX_BEKLEME_HISSE
                 if gun_farki > max_bekleme:
                     df, son_fiyat, hata = _guvenli_fiyat_cek(hisse, gun_sayisi=5)
                     if son_fiyat is None:
                         son_fiyat = giris_fiyat
-                    
-                    c.execute('''UPDATE ai_sinyaller
-                                 SET durum = ?, kapanis_fiyati = ?
-                                 WHERE id = ?''', (DURUM_ZAMAN_ASIMI, son_fiyat, islem_id))
-                    tur_str = "KRIPTO 9" if is_kripto else "HISSE 30"
-                    print(f"ZAMAN ASIMI ({tur_str}gun): {hisse} -> {gun_farki} gun gecti (Kapanis: {son_fiyat:.2f})")
+                    c.execute('''UPDATE ai_sinyaller SET durum = ?, kapanis_fiyati = ? WHERE id = ?''', (DURUM_ZAMAN_ASIMI, son_fiyat, islem_id))
                     kapanan += 1
                     continue
                 
-                # Piyasa verisini cek
-                period_gun = max(5, min(gun_farki + 1, 30))
-                df, son_fiyat, hata = _guvenli_fiyat_cek(hisse, gun_sayisi=period_gun)
-                
-                if df.empty or son_fiyat is None:
-                    if hata:
-                        print(f"[ATLANDI] {hisse}: {hata}")
-                    continue
+                # 2) Aynı gün açıldıysa 15 dakikalık mumlarla SADECE sinyal sonrası saatlere bak
+                if gun_farki == 0:
+                    try:
+                        sorgu_kodu = hisse.upper().replace('USDT', '-USD') if (is_kripto and 'USDT' in hisse.upper()) else hisse
+                        df_intra = yf.Ticker(sorgu_kodu).history(period="1d", interval="15m")
+                        if not df_intra.empty:
+                            df_intra.index = df_intra.index.tz_localize(None)
+                            df = df_intra[df_intra.index >= (sinyal_dt - datetime.timedelta(minutes=15))]
+                        else:
+                            df = pd.DataFrame()
+                    except Exception:
+                        df = pd.DataFrame()
+                    if df.empty:
+                        continue
+                    son_fiyat = float(df['Close'].iloc[-1])
+                else:
+                    # 1+ gün geçtiyse günlük veri çek ve SADECE sinyal tarihinden sonrasını al
+                    period_gun = max(5, min(gun_farki + 2, 30))
+                    df, son_fiyat, hata = _guvenli_fiyat_cek(hisse, gun_sayisi=period_gun)
+                    if df.empty or son_fiyat is None:
+                        continue
+                    df.index = pd.to_datetime(df.index).tz_localize(None)
+                    df = df[df.index >= sinyal_dt.replace(hour=0, minute=0, second=0, microsecond=0)]
+                    if df.empty:
+                        continue
                 
                 yeni_durum = None
                 kapanis_fiyat = None
@@ -454,70 +481,14 @@ def bekleyenleri_kontrol_et():
                 min_fiyat = float(df['Low'].min())
                 guncel_fiyat = float(df['Close'].iloc[-1])
                 
-                # Hedefe ulasti mi?
                 if max_fiyat >= hedef:
                     yeni_durum = DURUM_BASARILI
                     hedef_gunleri = df[df['High'] >= hedef]
-                    if len(hedef_gunleri) > 0:
-                        kapanis_fiyat = float(hedef_gunleri['Close'].iloc[0])
-                    else:
-                        kapanis_fiyat = hedef
-                
-                # Stop oldu mu?
+                    kapanis_fiyat = float(hedef_gunleri['Close'].iloc[0]) if len(hedef_gunleri) > 0 else hedef
                 elif min_fiyat <= stop:
                     yeni_durum = DURUM_BASARISIZ
                     stop_gunleri = df[df['Low'] <= stop]
-                    if len(stop_gunleri) > 0:
-                        kapanis_fiyat = float(stop_gunleri['Close'].iloc[0])
-                    else:
-                        kapanis_fiyat = stop
-                
-                # Guncel fiyat kontrolleri
-                elif guncel_fiyat >= hedef:
-                    yeni_durum = DURUM_BASARILI
-                    kapanis_fiyat = guncel_fiyat
-                elif guncel_fiyat <= stop:
-                    yeni_durum = DURUM_BASARISIZ
-                    kapanis_fiyat = guncel_fiyat
-
-                # ═══ TEKNIK GECERLILIK KONTROLU (7+ gun bekleyenler icin) ═══
-                if not yeni_durum and gun_farki >= 7:
-                    try:
-                        close = df['Close'].squeeze()
-                        # RSI hesapla
-                        delta = close.diff()
-                        gain = delta.where(delta > 0, 0.0)
-                        loss = (-delta).where(delta < 0, 0.0)
-                        avg_gain = gain.rolling(14).mean()
-                        avg_loss = loss.rolling(14).mean()
-                        rs = avg_gain / avg_loss.replace(0, np.nan) if hasattr(np, 'nan') else avg_gain / avg_loss.replace(0, 0.001)
-                        rsi_vals = 100 - (100 / (1 + rs))
-                        guncel_rsi = float(rsi_vals.iloc[-1]) if not pd.isna(rsi_vals.iloc[-1]) else 50.0
-                        
-                        # MACD kontrolu
-                        ema12 = close.ewm(span=12, adjust=False).mean()
-                        ema26 = close.ewm(span=26, adjust=False).mean()
-                        macd_line = ema12 - ema26
-                        signal_line = macd_line.ewm(span=9, adjust=False).mean()
-                        macd_sat_sinyali = macd_line.iloc[-1] < signal_line.iloc[-1]
-                        
-                        # Trend yonu degismis mi? (MA20 vs MA50)
-                        ma20 = float(close.rolling(20).mean().iloc[-1])
-                        ma50 = float(close.rolling(50).mean().iloc[-1]) if len(close) >= 50 else ma20
-                        trend_dusus = guncel_fiyat < ma20 and ma20 < ma50
-                        
-                        # Eger sinyal AL/sat trendi tersine donmusse kapat
-                        if guncel_rsi > 65 and macd_sat_sinyali and trend_dusus:
-                            yeni_durum = DURUM_BASARISIZ
-                            kapanis_fiyat = guncel_fiyat
-                            print(f"TEKNIK IPTAL (7+g): {hisse} -> RSI={guncel_rsi:.0f} MACD=SAT Trend=DUSUS -> pozisyon kapatiliyor")
-                        elif guncel_rsi > 60 and macd_sat_sinyali and gun_farki >= 14:
-                            # 14+ gun bekleyen ve teknik bozulan
-                            yeni_durum = DURUM_BASARISIZ
-                            kapanis_fiyat = guncel_fiyat
-                            print(f"TEKNIK IPTAL (14+g): {hisse} -> RSI={guncel_rsi:.0f} MACD=SAT -> pozisyon kapatiliyor")
-                    except Exception as te:
-                        print(f"Teknik kontrol hatasi ({hisse}): {te}")
+                    kapanis_fiyat = float(stop_gunleri['Close'].iloc[0]) if len(stop_gunleri) > 0 else stop
 
                 if yeni_durum:
                     c.execute('''UPDATE ai_sinyaller
