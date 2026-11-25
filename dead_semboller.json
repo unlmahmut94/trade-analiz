@@ -23,6 +23,7 @@
     "DGKLB.IS",
     "DISCA",
     "DOG-USD",
+    "ERJ",
     "EXAI",
     "FGEN",
     "FTM-USD",
@@ -63,6 +64,7 @@
     "POPCAT-USD",
     "PORTAL-USD",
     "PRIME-USD",
+    "PROS-USD",
     "QNBFB.IS",
     "QNBFL.IS",
     "RNDR-USD",
@@ -83,7 +85,7 @@
     "ZK-USD",
     "ZRO-USD"
   ],
-  "son_guncelleme": "2026-11-24 01:15:33",
-  "toplam_olu": 82,
+  "son_guncelleme": "2026-11-25 22:12:16",
+  "toplam_olu": 84,
   "not": "Bu semboller delisted/kote dışı olduğu için tarama listelerinden otomatik çıkarılmıştır."
 }
