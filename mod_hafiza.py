@@ -29,6 +29,7 @@ except ImportError:
 try:
     from mod_telegram import telegram_mesaj_gonder
 except ImportError:
+    pass
 
 try:
     from mod_piyasa_takvimi import borsa_acik_mi
