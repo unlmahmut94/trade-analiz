@@ -700,9 +700,9 @@ def _pozisyon_kapat(sinyal: dict) -> dict:
         yeni_durum = '⛔ BAŞARISIZ' if karar == 'SERT_CIKIS' else '⏰ ZAMAN AŞIMI'
 
         c.execute('''UPDATE ai_sinyaller
-                     SET durum = ?, kapanis_fiyati = ?
+                     SET durum = ?, kapanis_fiyati = ?, kapanis_zamani = ?
                      WHERE id = ?''',
-                  (yeni_durum, guncel_fiyat, islem_id))
+                  (yeni_durum, guncel_fiyat, datetime.now().strftime('%Y-%m-%d %H:%M'), islem_id))
 
         conn.commit()
         conn.close()

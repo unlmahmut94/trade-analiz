@@ -32,16 +32,16 @@ DB_YOLU = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_hafiza.db
 
 
 def get_market_threshold(hisse_adi):
-    """Piyasaya göre minimum hedef yüzdesi döndürür. (ESNETILDI)"""
-    if ".IS" in hisse_adi:
-        return 1.5
-    elif any(x in hisse_adi.upper() for x in ["USD", "USDT", "BTC", "ETH", "SOL", "AVAX", "LINK", "ADA", "DOGE", "XRP", "DOT", "MATIC", "UNI", "ATOM"]):
-        return 2.0
-    elif hisse_adi in ["^IXIC", "QQQ"] or any(h in hisse_adi.upper() for h in ["NVDA", "AAPL", "MSFT", "GOOGL", "META", "AMZN", "TSLA", "NFLX", "AMD", "INTC"]):
-        return 2.0
+    """Piyasaya gore dengeli minimum hedef yuzdesi dondurur."""
+    u = str(hisse_adi or "").upper()
+    if ".IS" in u:
+        return 1.0
+    elif any(x in u for x in ["USD", "USDT", "BTC", "ETH", "SOL", "AVAX", "LINK", "ADA", "DOGE", "XRP", "DOT", "MATIC", "UNI", "ATOM"]):
+        return 1.4
+    elif hisse_adi in ["^IXIC", "QQQ"] or any(h in u for h in ["NVDA", "AAPL", "MSFT", "GOOGL", "META", "AMZN", "TSLA", "NFLX", "AMD", "INTC"]):
+        return 1.4
     else:
-        return 1.5
-
+        return 1.0
 
 def render_teknik_ozet_kart(df_hisse, hisse_adi):
     """Bir hisse için özet teknik indikatör skor kartı döndürür (kompakt)."""

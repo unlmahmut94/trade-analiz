@@ -451,7 +451,7 @@ def bekleyenleri_kontrol_et():
                     df, son_fiyat, hata = _guvenli_fiyat_cek(hisse, gun_sayisi=5)
                     if son_fiyat is None:
                         son_fiyat = giris_fiyat
-                    c.execute('''UPDATE ai_sinyaller SET durum = ?, kapanis_fiyati = ? WHERE id = ?''', (DURUM_ZAMAN_ASIMI, son_fiyat, islem_id))
+                    c.execute('''UPDATE ai_sinyaller SET durum = ?, kapanis_fiyati = ?, kapanis_zamani = ? WHERE id = ?''', (DURUM_ZAMAN_ASIMI, son_fiyat, islem_id))
                     kapanan += 1
                     continue
                 
@@ -499,7 +499,7 @@ def bekleyenleri_kontrol_et():
 
                 if yeni_durum:
                     c.execute('''UPDATE ai_sinyaller
-                                 SET durum = ?, kapanis_fiyati = ?
+                                 SET durum = ?, kapanis_fiyati = ?, kapanis_zamani = ?
                                  WHERE id = ?''', (yeni_durum, kapanis_fiyat, islem_id))
                     print(f"POZISYON KAPANDI: {hisse} -> {yeni_durum} (Kapanis: {kapanis_fiyat:.2f})")
                     kapanan += 1

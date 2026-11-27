@@ -361,57 +361,76 @@ def _denetci_yanit_uret(metin):
     return f"Emir alindi ({_sistem_durum_ozeti()}). Onay bekleyen kayitlar icin 'ONAYLA IA' veya 'TARA' / 'DURUM' yazabilirsin."
 
 
-def _ollama_yanit_uret(metin, denetci_notu=""):
-    import urllib.request
+def _ollama_yanit_uret(soru, denetci_notu=""):
+    import urllib.request as _req
     import json as _json
-    ortak_sohbet = _ortak_gecmis_metni(limit=12)
-    sistem_ozeti = _sistem_durum_ozeti()
+
+    secilen_model = "qwen2.5-coder:7b"
+    s_lower = (soru or "").lower()
+
+    # Konuya gore ilgili proje dosyalarini salt-okunur tara
+    aday_dosyalar = []
+    if any(k in s_lower for k in ("tarama", "piyasa", "hisse", "sinyal", "filtre", "ekran", "bist")):
+        aday_dosyalar.extend(["mod_tarama_sekmesi.py", "tarama_motoru.py", "mod_filtreleme.py"])
+    if any(k in s_lower for k in ("bekleyen", "arsiv", "yedek", "zaman", "risk", "db", "veritabani", "hafiza")):
+        aday_dosyalar.extend(["bekleyen_yonetim.py", "mod_hafiza.py"])
+    if any(k in s_lower for k in ("telegram", "bot", "onay", "kuyruk", "ajan")):
+        aday_dosyalar.extend(["trade_ia_telegram.py", "denetci_ajan.py"])
+
+    ek_baglam = []
+    for ad in dict.fromkeys(aday_dosyalar):
+        try:
+            if "proje_dosyasi_oku" in globals():
+                icerik = proje_dosyasi_oku(ad, max_karakter=3500)
+                if not icerik.startswith("Erisim reddedildi") and not icerik.startswith("Dosya bulunamadi"):
+                    ek_baglam.append(f"--- {ad} (salt-okunur) ---\n{icerik}")
+        except Exception:
+            pass
+
+    if any(k in s_lower for k in ("bekleyen", "risk", "arsiv", "yedek", "zaman")):
+        try:
+            import bekleyen_yonetim as _by
+            rapor = _by.bekleyen_tara_ve_yorumla(limit_oncelik=5)
+            ek_baglam.append("--- bekleyen_yonetim ozeti ---\n" + _json.dumps(rapor, ensure_ascii=False, default=str))
+        except Exception:
+            pass
+
+    baglam_metni = ("\n\n".join(ek_baglam))[:9000]
+    sistem_talimati = (
+        "Sen bir kod ve sistem analiz asistanisin. Genel gecer tavsiye veya uzun madde listeleri yazma. "
+        "Yalnizca asagida verilen kod ve veri ciktisindaki somut nedenleri net, kisa ve dogrudan Turkce acikla. "
+        "Kullanici yetkisi, guvenlik ayari gibi kodda/veride olmayan varsayimlar uydurma. "
+        "Kodda veya veride kanit yoksa bunu acikca soyle."
+    )
+
+    prompt_parcalari = [f"Kullanici Sorusu: {soru}"]
+    if denetci_notu:
+        prompt_parcalari.append(f"Denetci Notu: {denetci_notu}")
+    if baglam_metni:
+        prompt_parcalari.append(f"Salt-Okunur Kod ve Veri Baglami:\n{baglam_metni}")
+
+    payload = _json.dumps({
+        "model": secilen_model,
+        "system": sistem_talimati,
+        "prompt": "\n\n".join(prompt_parcalari),
+        "stream": False,
+        "options": {"temperature": 0.2}
+    }).encode("utf-8")
+
     try:
-        req_tags = urllib.request.Request("http://localhost:11434/api/tags", method="GET")
-        with urllib.request.urlopen(req_tags, timeout=2) as resp:
-            tags_data = _json.loads(resp.read().decode("utf-8"))
-        modeller = [m.get("name") for m in tags_data.get("models", []) if m.get("name")]
-        if not modeller:
-            return "Ollama servisi acik ancak henuz model indirilmemis (Ollama_TradeIA_Baslat.bat ile indirilebilir)."
-        secilen_model = modeller[0]
-        for tercih in ("qwen2.5-coder", "qwen2.5", "llama3.1", "llama3", "gemma2"):
-            eslesen = [m for m in modeller if tercih in m.lower()]
-            if eslesen:
-                secilen_model = eslesen[0]
-                break
-
-        prompt = (
-            "Sen Trade IA sistemindeki yerel yapay zeka uzmanisin (Ollama). "
-            "Sistemde bir de kural tabanli 'Denetci' ajani var ve ikiniz ayni sohbet odasindasiniz. "
-            "Kullanicinin izni olmadan dosya veya veritabani degisikligi yapma; oneri sun ve izin iste. "
-            "Kisa, net ve Turkce yanit ver.\n\n"
-            f"Guncel Sistem Ozeti: {sistem_ozeti}\n"
-            f"Ortak Sohbet ve Emir Gecmisi:\n{ortak_sohbet}\n"
-        )
-        if denetci_notu:
-            prompt += f"Denetcinin Az Onceki Ciktisi: {denetci_notu}\n"
-        prompt += f"Kullanicinin Son Mesaji: {metin}"
-
-        payload = _json.dumps({
-            "model": secilen_model,
-            "prompt": prompt,
-            "stream": False
-        }).encode("utf-8")
-        req = urllib.request.Request(
+        req = _req.Request(
             "http://localhost:11434/api/generate",
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=35) as r:
+        with _req.urlopen(req, timeout=45) as r:
             cevap = _json.loads(r.read().decode("utf-8")).get("response", "").strip()
-        if cevap:
-            return f"[{secilen_model}] {cevap}"
+            if cevap:
+                return f"[{secilen_model}] {cevap}"
     except Exception:
         return "Ollama su an kapali (aktif etmek icin Ollama_TradeIA_Baslat.bat dosyasini acabilirsin)."
     return "Ollama yanit uretemedi."
-
-
 
 def sohbet_gecmisi_kaydet(gecmis):
     import json as _json
@@ -611,7 +630,15 @@ def mesaj_ve_onay_isle(mesaj, kaynak="Web", dogrudan_onay=False):
         return {"durum": "iptal", "yanit": taslak_reddet(kaynak=kaynak)}
 
     hedef, temiz_metin, etiket_acik = _niyet_ve_hedef_cozumle(metin)
-    if dogrudan_onay or etiket_acik:
+    _soru_veya_analiz = (
+        "?" in kucuk
+        or any(k in kucuk for k in (
+            "neden", "nicin", "ni?in", "nasil", "nas?l", "ne zaman", "hangi",
+            "analiz", "kontrol", "yorumla", "acikla", "a??kla", "durum",
+            "piyasa", "tarama", "hata", "sorun", "neden boyle", "neden b?yle"
+        ))
+    )
+    if dogrudan_onay or etiket_acik or _soru_veya_analiz:
         taslak_temizle()
         return {"durum": "calisti", "yanit": _dogrudan_calistir(hedef, temiz_metin, metin, kaynak=kaynak)}
 
@@ -627,3 +654,42 @@ def mesaj_ve_onay_isle(mesaj, kaynak="Web", dogrudan_onay=False):
     }
     taslak_yaz(taslak)
     return {"durum": "onay_bekliyor", "ozet": ozet, "taslak": taslak, "yanit": ""}
+
+
+# --- Salt-Okunur Proje Kod Okuyucu (Yazma Yetkisi Yoktur) ---
+from pathlib import Path as _Path
+
+_SALT_OKUNUR_KOK = _Path(__file__).resolve().parent
+_IZINLI_UZANTILAR = {".py", ".md", ".txt", ".json", ".toml", ".yaml", ".yml"}
+_YASAKLI_DOSYALAR = {".env", "telegram_offset.txt"}
+
+
+def proje_dosyalarini_listele() -> list[str]:
+    dosyalar = []
+    for yol in sorted(_SALT_OKUNUR_KOK.rglob("*")):
+        if not yol.is_file():
+            continue
+        if any(part.startswith(".") or part in {"__pycache__", ".venv", "venv", "node_modules"} for part in yol.parts):
+            continue
+        if yol.name in _YASAKLI_DOSYALAR:
+            continue
+        if yol.suffix.lower() in _IZINLI_UZANTILAR:
+            dosyalar.append(str(yol.relative_to(_SALT_OKUNUR_KOK)))
+    return dosyalar
+
+
+def proje_dosyasi_oku(dosya_adi: str, max_karakter: int = 12000) -> str:
+    hedef = (_SALT_OKUNUR_KOK / dosya_adi).resolve()
+    if _SALT_OKUNUR_KOK not in [hedef, *hedef.parents]:
+        return "Erisim reddedildi: proje klasoru disina cikilamaz."
+    if hedef.name in _YASAKLI_DOSYALAR or hedef.name.startswith(".env"):
+        return "Erisim reddedildi: gizli/ortam dosyasi okunamaz."
+    if hedef.suffix.lower() not in _IZINLI_UZANTILAR:
+        return f"Erisim reddedildi: {hedef.suffix} uzantisi salt-okunur listede degil."
+    if not hedef.exists() or not hedef.is_file():
+        return f"Dosya bulunamadi: {dosya_adi}"
+
+    icerik = hedef.read_text(encoding="utf-8", errors="replace")
+    if len(icerik) > max_karakter:
+        return icerik[:max_karakter] + f"\n\n... [Kesildi: toplam {len(icerik)} karakter, ilk {max_karakter} karakter gosterildi]"
+    return icerik

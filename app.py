@@ -559,11 +559,9 @@ def render_piyasa_denetcisi_ui():
         return
 
     if dock == 'left':
-        ana_kol, yan_kol = st.columns([4, 6])
-        pencere_kol = ana_kol
+        pencere_kol, _ = st.columns([4, 6])
     else:
-        yan_kol, ana_kol = st.columns([6, 4])
-        pencere_kol = ana_kol
+        _, pencere_kol = st.columns([6, 4])
 
     with pencere_kol:
         with st.container(border=True):

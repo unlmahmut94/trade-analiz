@@ -144,19 +144,36 @@ def _durum_renklendir(val):
     return ''
 
 
+def _kapanis_zamani_formatla(row) -> str:
+    durum_str = str(row.get('durum') or '').strip()
+    if 'BEKLIYOR' in durum_str or 'BEKL?YOR' in durum_str or durum_str == '':
+        return '-'
+    kz = row.get('kapanis_zamani')
+    if pd.notna(kz) and str(kz).strip() not in ('', 'None', 'nan', '-'):
+        return str(kz).strip()[:16]
+    t = row.get('tarih')
+    if pd.notna(t) and str(t).strip() not in ('', 'None', 'nan'):
+        return str(t).strip()[:16]
+    return '-'
+
+
 def _tablo_goster(df: pd.DataFrame, max_yukseklik: int = 350):
     if df.empty:
-        st.caption("Henüz kayıt yok.")
+        st.caption("Hen?z kay?t yok.")
         return
 
     g = df.copy()
-    beklenen = ['tarih', 'hisse', 'sinyal_tipi', 'giris_fiyati', 'hedef_fiyat', 'stop_fiyat', 'durum', 'kapanis_fiyati']
+    if 'kapanis_zamani' not in g.columns:
+        g['kapanis_zamani'] = None
+    g['Kapan?? Zaman?'] = g.apply(_kapanis_zamani_formatla, axis=1)
+
+    beklenen = ['tarih', 'hisse', 'sinyal_tipi', 'giris_fiyati', 'hedef_fiyat', 'stop_fiyat', 'durum', 'kapanis_fiyati', 'Kapan?? Zaman?']
     for c in beklenen:
         if c not in g.columns:
             g[c] = None
     g = g[beklenen]
-    g.columns = ['Sinyal Zamanı', 'Sembol', 'Sinyal', 'Giriş $', 'Hedef $', 'Stop $', 'Durum', 'Kapanış $']
-    for c in ['Giriş $', 'Hedef $', 'Stop $', 'Kapanış $']:
+    g.columns = ['Sinyal Zaman?', 'Sembol', 'Sinyal', 'Giri? $', 'Hedef $', 'Stop $', 'Durum', 'Kapan?? $', 'Kapan?? Zaman?']
+    for c in ['Giri? $', 'Hedef $', 'Stop $', 'Kapan?? $']:
         g[c] = pd.to_numeric(g[c], errors='coerce')
         g[c] = g[c].apply(lambda x: _fmt_1246(x) if pd.notna(x) and x != 0 else "-")
 

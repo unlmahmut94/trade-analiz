@@ -15,5 +15,131 @@
     "kim": "Denetci",
     "zaman": "2026-11-27 16:44:56",
     "mesaj": "Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 16:56:00",
+    "mesaj": "bekleyen sinyalleri tara ve risk durumunu yorumla"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 16:56:00",
+    "mesaj": "Denetim tamamlandi. Yeni uyari: 0 | Kuyruktaki toplam kayit: 1 | Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 16:56:02",
+    "mesaj": "Ollama servisi acik ancak henuz model indirilmemis (Ollama_TradeIA_Baslat.bat ile indirilebilir)."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:10:22",
+    "mesaj": "bekleyen işlemleri kontrol et"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:10:22",
+    "mesaj": "Emir alindi (Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']). Onay bekleyen kayitlar icin 'ONAYLA IA' veya 'TARA' / 'DURUM' yazabilirsin."
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:10:38",
+    "mesaj": "[qwen2.5-coder:7b] Bekleyen işlemlerinizi kontrol etmek için şu adımları izleyebilirsiniz:\n\n1. Bekleyen sinyallerinizi tara ve risk durumunu yorumlayın.\n2. Bekleyen kayıtları yedek alın.\n3. Bekleyen kayıtları arşiv veya zaman aşımı yapın.\n\nİşte bu adımları nasıl gerçekleştirebileceğinizi detaylı olarak:\n\n### 1. Bekleyen Sinyalleri Tara ve Risk Durumunu Yorumla\n- Sinyallerinizi inceleyin ve her birinin risk düzeyini belirleyin.\n- Yüksek riskli sinyalleri öncelikli olarak ele almanızı öneririm.\n\n### 2. Bekleyen Kayıtları Yedek Alın\n- Bekleyen kayıtlarınızı yedeklemek için bir yedek almayı düşünün.\n- Bu, sistemdeki değişikliklerin kaybını önlemek için faydalı olabilir.\n\n### 3. Bekleyen Kayıtları Arşiv veya Zaman Aşımı Yapın\n- Bekleyen kayıtları arşiv ederek sistem kapasitesini serbest bırakabilirsiniz.\n- Eski kayıtların ihtiyaç duyulmadığını ve riskini düşük bulduğunuzda, bu kayıtları zaman aşımı yapabilirsiniz.\n\nBekleyen işlemlerinizi kontrol etmek için bu adımları takip edin. Bu, sistem performansını artırır ve riski azaltır."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:16:28",
+    "mesaj": "ollama çalışıyormu şu anda sistemde çakışan kodlar varmı"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:16:28",
+    "mesaj": "Emir alindi (Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']). Onay bekleyen kayitlar icin 'ONAYLA IA' veya 'TARA' / 'DURUM' yazabilirsin."
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:16:36",
+    "mesaj": "[qwen2.5-coder:7b] Ollama şu anda çalışıyor. Çakışan kodlar varsa, lütfen sorununuzu ayrıntılı bir şekilde açıklamak için daha fazla bilgi sağlayın."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:21:12",
+    "mesaj": "1. Bekleyen sinyallerinizi tara ve risk durumunu yorumlayın.\n2. Bekleyen kayıtları yedek alın.\n3. Bekleyen kayıtları arşiv veya zaman aşımı yapın.\n\nİşte bu adımları nasıl gerçekleştirebileceğinizi detaylı olarak:\n\n### 1. Bekleyen Sinyalleri Tara ve Risk Durumunu Yorumla\n- Sinyallerinizi inceleyin ve her birinin risk düzeyini belirleyin.\n- Yüksek riskli sinyalleri öncelikli olarak ele almanızı öneririm.\n\n### 2. Bekleyen Kayıtları Yedek Alın\n- Bekleyen kayıtlarınızı yedeklemek için bir yedek almayı düşünün.\n- Bu, sistemdeki değişikliklerin kaybını önlemek için faydalı olabilir.\n\n### 3. Bekleyen Kayıtları Arşiv veya Zaman Aşımı Yapın\n- Bekleyen kayıtları arşiv ederek sistem kapasitesini serbest bırakabilirsiniz.\n- Eski kayıtların ihtiyaç duyulmadığını ve riskini düşük bulduğunuzda, bu kayıtları zaman aşımı yapabilirsiniz.\n\nbu işlemlerin tümü gerçekleştir gerekiyorsa kodları sorup değiştir"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:21:13",
+    "mesaj": "Denetim tamamlandi. Yeni uyari: 0 | Kuyruktaki toplam kayit: 1 | Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:21:24",
+    "mesaj": "[qwen2.5-coder:7b] Bekleyen işlemlerinizi tam olarak gerçekleştirebilmeniz için bazı kod değişiklikleri yapmanız gerekebilir. Lütfen aşağıdaki adımları takip edin:\n\n1. **Bekleyen Sinyalleri Tara ve Risk Durumunu Yorumla**:\n   - Sinyallerinizi inceleyin ve her birinin risk düzeyini belirleyin.\n   - Yüksek riskli sinyalleri öncelikli olarak ele almanızı öneririm.\n\n2. **Bekleyen Kayıtları Yedek Alın**:\n   - Bekleyen kayıtlarınızı yedeklemek için bir yedek almayı düşünün.\n   - Bu, sistemdeki değişikliklerin kaybını önlemek için faydalı olabilir.\n\n3. **Bekleyen Kayıtları Arşiv veya Zaman Aşımı Yapın**:\n   - Bekleyen kayıtları arşiv ederek sistem kapasitesini serbest bırakabilirsiniz.\n   - Eski kayıtların ihtiyaç duyulmadığını ve riskini düşük bulduğunuzda, bu kayıtları zaman aşımı yapabilirsiniz.\n\nBu işlemlerin tümü gerçekleştirildikten sonra, sisteminizi kontrol edin ve herhangi bir sorun veya hata olduğunu kontrol edin. Eğer hala sorunlarla karşılaşırsanız, lütfen detaylı bir şekilde sorununuzu ve hangi kod parçacığının sorunla olduğunu belirtin."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:29:26",
+    "mesaj": "Ollama: [qwen2.5-coder:7b] Bekleyen işlemlerinizi tam olarak gerçekleştirebilmeniz için bazı kod değişiklikleri yapmanız gerekebilir. Lütfen aşağıdaki adımları takip edin:\n\n1. Bekleyen Sinyalleri Tara ve Risk Durumunu Yorumla:\n   - Sinyallerinizi inceleyin ve her birinin risk düzeyini belirleyin.\n   - Yüksek riskli sinyalleri öncelikli olarak ele almanızı öneririm.\n\n2. Bekleyen Kayıtları Yedek Alın:\n   - Bekleyen kayıtlarınızı yedeklemek için bir yedek almayı düşünün.\n   - Bu, sistemdeki değişikliklerin kaybını önlemek için faydalı olabilir.\n\n3. Bekleyen Kayıtları Arşiv veya Zaman Aşımı Yapın:\n   - Bekleyen kayıtları arşiv ederek sistem kapasitesini serbest bırakabilirsiniz.\n   - Eski kayıtların ihtiyaç duyulmadığını ve riskini düşük bulduğunuzda, bu kayıtları zaman aşımı yapabilirsiniz.\n\nBu işlemlerin tümü gerçekleştirildikten sonra, sisteminizi kontrol edin ve herhangi bir sorun veya hata olduğunu kontrol edin. Eğer hala sorunlarla karşılaşırsanız, lütfen detaylı bir şekilde sorununuzu ve hangi kod parçacığının sorunla olduğunu belirtin. bu işlemleri dahada detaylandır özetle nasıl yapabiliriz söyle"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:29:26",
+    "mesaj": "Denetim tamamlandi. Yeni uyari: 0 | Kuyruktaki toplam kayit: 1 | Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:29:40",
+    "mesaj": "[qwen2.5-coder:7b] Bekleyen işlemlerinizi tam olarak gerçekleştirebilmeniz için aşağıdaki adımları izleyin:\n\n1. **Bekleyen Sinyalleri Tara ve Risk Durumunu Yorumla**:\n   - Sinyallerinizi inceleyin ve her birinin risk düzeyini belirleyin.\n   - Yüksek riskli sinyalleri öncelikli olarak ele almanızı öneririm.\n\n2. **Bekleyen Kayıtları Yedek Alın**:\n   - Bekleyen kayıtlarınızı yedeklemek için bir yedek almayı düşünün.\n   - Bu, sistemdeki değişikliklerin kaybını önlemek için faydalı olabilir.\n\n3. **Bekleyen Kayıtları Arşiv veya Zaman Aşımı Yapın**:\n   - Bekleyen kayıtları arşiv ederek sistem kapasitesini serbest bırakabilirsiniz.\n   - Eski kayıtların ihtiyaç duyulmadığını ve riskini düşük bulduğunuzda, bu kayıtları zaman aşımı yapabilirsiniz.\n\nBu işlemlerin tümü gerçekleştirildikten sonra, sisteminizi kontrol edin ve herhangi bir sorun veya hata olduğunu kontrol edin. Eğer hala sorunlarla karşılaşırsanız, lütfen detaylı bir şekilde sorununuzu ve hangi kod parçacığının sorunla olduğunu belirtin."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:31:03",
+    "mesaj": "sistem neden piyasa taraması ekranında işlem bulamıyor piyasalar mı kapalı"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:31:03",
+    "mesaj": "Denetim tamamlandi. Yeni uyari: 0 | Kuyruktaki toplam kayit: 1 | Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:31:17",
+    "mesaj": "[qwen2.5-coder:7b] Piyasa taraması ekranında işlem bulunamadığı durumunda, birkaç neden olabilir:\n\n1. **Piyasalar Kapalı**: Belirttiğinizde, piyasaların kapalı olabilir. Bu durumda işlem bulunmaz.\n\n2. **Kullanıcı Yetkisi Sorunları**: Kullanıcının yetkileri yeterli olmadığı durumda işlem gerçekleştirilemez.\n\n3. **Sistem Güvenlik Ayarları**: Sistem güvenliği ayarları, kullanıcıya izin verilen işlemler için kısıtlamaları içerebilir.\n\n4. **Sistem Sorunları**: Sistemsel hatalar veya sorunlar, işlemi gerçekleştiremez.\n\n### Çözüm Adımları:\n\n1. **Piyasa Durumu Kontrolü**:\n   - Piyasaların şu anki durumunu kontrol edin. Eğer kapalıysa, onları açmaya çalışın veya işlemi geçici olarak erteleyin.\n\n2. **Kullanıcı Yetkilerini Kontrolü**:\n   - Kullanıcının yetkilerini kontrol edin. Yeterli yetkili olup olmadığını kontrol edin.\n\n3. **Sistem Güvenlik Ayarlarını Kontrolü**:\n   - Sistem güvenliği ayarlarını kontrol edin. Kullanıcının izinleri ve kısıtlamalarını gözden geçirin.\n\n4. **Sistem Sorunlarını Kontrolü**:\n   - Sistemde hatalar veya sorunlar olup olmadığını kontrol edin. Hataları tamamlamak veya düzeltmek için gerekli olan adımları alın.\n\n### Özet:\nPiyasa taraması ekranında işlem bulunamadığı durumda, piyasaların kapalı olup olmadığını kontrol edin. Kullanıcının yetkilerini ve sistem güvenliği ayarlarını kontrol edin. Eğer hala sorunlarla karşılaşırsanız, sistem hatalarını kontrol edin ve gerekli düzenlemeleri yapın."
+  },
+  {
+    "rol": "kullanici",
+    "kim": "Sen (Telegram)",
+    "zaman": "2026-11-27 17:41:53",
+    "mesaj": "sistem neden piyasa taraması ekranında işlem bulamıyor piyasalar mı kapalı"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Denetci",
+    "zaman": "2026-11-27 17:41:53",
+    "mesaj": "Denetim tamamlandi. Yeni uyari: 0 | Kuyruktaki toplam kayit: 1 | Toplam sinyal: 643, Bekleyen sinyal: 588, Onay bekleyen IA: ['IA (Bekleyen Sinyal Sayisi Yuksek)']"
+  },
+  {
+    "rol": "ajan",
+    "kim": "Ollama",
+    "zaman": "2026-11-27 17:42:10",
+    "mesaj": "[qwen2.5-coder:7b] Sistem piyasa taraması ekranında işlem bulamıyor olabilir çünkü birkaç farklı neden neden olabilir:\n\n1. **Veri Kaynağı Sorunları**: YFinance veya başka veri kaynakları, piyasada taramak istediğiniz hisselerin verisini çekemiyor olabilir. Bu durumda, veri kaynaklarının geçici olarak kapalı veya hizmet veremiyor olması olabilir.\n\n2. **API Limitleri**: YFinance veya diğer API'ler, belirli bir süre boyunca veri çekme isteklerini sınırlar. Eğer sistem bu sınırları aşmışsa, veri çekme işlemi başarısız olabilir.\n\n3. **Veri Filtreleme**: Sistemdeki veri filtreleme mekanizması, bazı hisseleri veya piyasaları filtreliyor olabilir. Bu durumda, piyasada taramak istediğiniz hisseleri veya piyasaları filtrelemiş olabilir.\n\n4. **Veri Kayıt Hataları**: Veri kaydı sırasında hatalar oluşmuş olabilir. Bu durumda, veri kaydı işlemi başarısız olabilir.\n\n5. **Sistem Performansı**: Sistem performansı düşük olabilir. Bu durumda, veri çekme ve işleme işlemi yavaş olabilir.\n\n6. **Kod Hataları**: Kodda hatalar olabilir. Bu durumda, veri çekme ve işleme işlemi başarısız olabilir.\n\n7. **Veri Eksikliği**: Veri eksikliği olabilir. Bu durumda, veri çekme ve işleme işlemi başarısız olabilir.\n\n8. **Veri Güvenlik Ayarları**: Veri güvenlik ayarları, veri çekme ve işleme işlemi kısıtlıyor olabilir.\n\n9. **Veri Güvenlik Ayarları**: Veri güvenlik ayarları, veri çekme ve işleme işlemi kısıtlıyor olabilir.\n\n10. **Veri Güvenlik Ayarları**: Veri güvenlik ayarları, veri çekme ve işleme işlemi kısıtlıyor olabilir.\n\nBu nedenlerden dolayı, sistem piyasa taraması ekranında işlem bulamıyor olabilir."
   }
 ]
