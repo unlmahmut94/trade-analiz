@@ -1,0 +1,13 @@
+[
+  {
+    "id": "A-001",
+    "kod": "DB_BEKLEYEN_YIGILMA",
+    "baslik": "Bekleyen Sinyal Sayisi Yuksek",
+    "sorun": "Su an 588 adet BEKLIYOR durumunda sinyal birikmis gorunuyor.",
+    "cozum": "30 gunden eski BEKLIYOR kayitlarini yedek alip arsiv/zaman asimina cekeyim mi?",
+    "eylem": "ARSIVLE_ESKI_BEKLEYEN",
+    "durum": "BEKLIYOR",
+    "olusturma": "2026-11-27 14:19:15",
+    "son_gorulme": "2026-11-27 14:19:15"
+  }
+]

@@ -446,3 +446,130 @@ elif aktif == 7:
 
 elif aktif == 8:
     yardim_paneli()
+
+
+# === PIYASA DENETCISI (??) SOHBET PENCERESI ===
+def _ajan_arka_plan_baslat():
+    if st.session_state.get('_ajan_bg_started'):
+        return
+    st.session_state['_ajan_bg_started'] = True
+    try:
+        import threading, time
+        from denetci_ajan import denetim_calistir
+        def _dongu():
+            while True:
+                time.sleep(900)
+                try:
+                    denetim_calistir(telegram_bildir=True)
+                except Exception:
+                    pass
+        threading.Thread(target=_dongu, daemon=True, name='piyasa-denetci-daemon').start()
+    except Exception:
+        pass
+
+
+def render_piyasa_denetcisi_ui():
+    _ajan_arka_plan_baslat()
+    try:
+        from denetci_ajan import (
+            kuyrugu_getir,
+            sohbet_gecmisi_getir,
+            onayla_oneriyi,
+            reddet_oneriyi,
+            kullanici_mesaji_isle,
+            denetim_calistir,
+        )
+    except Exception as e:
+        st.warning('Piyasa Denetcisi yuklenemedi: ' + str(e))
+        return
+
+    if 'piyasa_denetci_acik' not in st.session_state:
+        st.session_state['piyasa_denetci_acik'] = False
+
+    kuyruk = kuyrugu_getir()
+    bekleyenler = [x for x in kuyruk if x.get('durum') == 'BEKLIYOR']
+    etiket = '📈 ' + str(len(bekleyenler)) if bekleyenler else '📈'
+
+    st.markdown('''
+        <style>
+        div[data-testid="stButton"]:has(button[key="btn_piyasa_denetci_toggle"]),
+        .st-key-btn_piyasa_denetci_toggle {
+            position: fixed !important;
+            top: 14px !important;
+            right: 18px !important;
+            z-index: 99999 !important;
+            width: auto !important;
+        }
+        .st-key-btn_piyasa_denetci_toggle button {
+            min-height: 44px !important;
+            height: 44px !important;
+            padding: 0 13px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.28) !important;
+        }
+        </style>
+    ''', unsafe_allow_html=True)
+
+    if st.button(etiket, key='btn_piyasa_denetci_toggle', help='Piyasa Denetcisi (Ac / Kapat)'):
+        st.session_state['piyasa_denetci_acik'] = not st.session_state['piyasa_denetci_acik']
+        st.rerun()
+
+    if not st.session_state['piyasa_denetci_acik']:
+        return
+
+    with st.expander('📈 Piyasa Denetcisi - Uyari, Onay ve Sohbet', expanded=True):
+        ust_c1, ust_c2, ust_c3 = st.columns([2, 3, 1])
+        with ust_c1:
+            if st.button('Simdi Denetle', key='btn_ajan_simdi_tara'):
+                ozet = denetim_calistir(telegram_bildir=False)
+                st.success('Denetim tamamlandi. Yeni: ' + str(ozet['yeni_uyarilar']) + ' | Kuyruk: ' + str(ozet['toplam_kuyruk']))
+                st.rerun()
+        with ust_c2:
+            st.caption('Bekleyen Oneri: ' + str(len(bekleyenler)) + ' | Telegram: Aktif')
+        with ust_c3:
+            if st.button('✕ Kapat', key='btn_ajan_kapat'):
+                st.session_state['piyasa_denetci_acik'] = False
+                st.rerun()
+
+        st.markdown('**Bekleyen Oneriler (Cozeyim mi?)**')
+        if not bekleyenler:
+            st.info('Su an onay bekleyen yeni bir uyari yok.')
+        else:
+            for item in bekleyenler:
+                oid = str(item.get('id', ''))
+                baslik = str(item.get('baslik', ''))
+                sorun = str(item.get('sorun', ''))
+                cozum = str(item.get('cozum', ''))
+                st.markdown('- **' + oid + ' - ' + baslik + '**: ' + sorun + '  \n  *Oneri:* ' + cozum)
+                b1, b2, _ = st.columns([2, 2, 6])
+                with b1:
+                    if st.button('Onayla ve Coz', key='onayla_' + oid):
+                        sonuc = onayla_oneriyi(oid)
+                        st.success(sonuc)
+                        st.rerun()
+                with b2:
+                    if st.button('Reddet', key='reddet_' + oid):
+                        sonuc = reddet_oneriyi(oid)
+                        st.info(sonuc)
+                        st.rerun()
+
+        st.divider()
+        st.markdown('**Sohbet Gecmisi**')
+        for m in sohbet_gecmisi_getir()[-12:]:
+            rol = '📈 Denetci' if m.get('rol') == 'ajan' else 'Sen'
+            st.markdown('**' + rol + '** *(' + str(m.get('zaman', '')) + ')*: ' + str(m.get('mesaj', '')))
+
+        with st.form('form_piyasa_denetci_sohbet', clear_on_submit=True):
+            girdi = st.text_input('Denetciye yaz (ornek: DURUM, TARA veya soru):', key='input_ajan_mesaj')
+            gonderildi = st.form_submit_button('Gonder')
+            if gonderildi and girdi:
+                kullanici_mesaji_isle(girdi)
+                st.rerun()
+
+
+try:
+    render_piyasa_denetcisi_ui()
+except Exception:
+    pass
