@@ -284,7 +284,7 @@ def sinyal_kaydet(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop_fiyat):
             return False
         _hedef_pct = (_h - _g) / _g * 100.0
         _stop_pct = (_g - _s) / _g * 100.0
-        if _hedef_pct > 50.0 or _stop_pct > 30.0:
+        if _hedef_pct < 2.0 or _hedef_pct > 50.0 or _stop_pct > 30.0:
             print(f"[ENGEL-ORAN] {hisse}: Ucuk hedef/stop orani (hedef %{_hedef_pct:.1f}, stop %{_stop_pct:.1f}) - kaydedilmedi.")
             conn.close()
             return False
@@ -292,7 +292,7 @@ def sinyal_kaydet(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop_fiyat):
             eski_id, eski_giris, eski_durum, eski_tarih = mevcut_liste[0]
             _eski_g = float(eski_giris) if eski_giris else 0.0
             fark_yuzde = abs(_g - _eski_g) / _eski_g * 100.0 if _eski_g > 0 else 100.0
-            if fark_yuzde < 2.0:
+            if fark_yuzde < 3.5:
                 print(f"[ENGEL-TEKRAR] {hisse}: Zaten BEKLIYOR ve fiyat farki %{fark_yuzde:.2f} (<%2.0) - yeni sinyal acilmadi.")
                 conn.close()
                 return False
