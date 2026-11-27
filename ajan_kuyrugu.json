@@ -1,6 +1,6 @@
 [
   {
-    "id": "A-001",
+    "id": "IA",
     "kod": "DB_BEKLEYEN_YIGILMA",
     "baslik": "Bekleyen Sinyal Sayisi Yuksek",
     "sorun": "Su an 588 adet BEKLIYOR durumunda sinyal birikmis gorunuyor.",
@@ -8,6 +8,6 @@
     "eylem": "ARSIVLE_ESKI_BEKLEYEN",
     "durum": "BEKLIYOR",
     "olusturma": "2026-11-27 14:19:15",
-    "son_gorulme": "2026-11-27 14:19:15"
+    "son_gorulme": "2026-11-27 14:47:18"
   }
 ]

@@ -74,7 +74,7 @@ def _uyari_ekle_veya_guncelle(kuyruk, kod, baslik, sorun, cozum_aciklama, eylem_
             return False
 
     idx = len(kuyruk) + 1
-    oneri_id = f"A-{idx:03d}"
+    oneri_id = "IA" if idx == 1 else f"IA{idx - 1}"
     kayit = {
         "id": oneri_id,
         "kod": kod,
@@ -277,33 +277,353 @@ def reddet_oneriyi(oneri_id):
     return "Oneri bulunamadi."
 
 
-def kullanici_mesaji_isle(mesaj):
+
+def _yerel_llm_sor(kullanici_sorusu, sistem_ozeti):
+    import urllib.request
+    import json as _json
+    try:
+        req_tags = urllib.request.Request("http://localhost:11434/api/tags", method="GET")
+        with urllib.request.urlopen(req_tags, timeout=2) as resp:
+            tags_data = _json.loads(resp.read().decode("utf-8"))
+        modeller = [m.get("name") for m in tags_data.get("models", []) if m.get("name")]
+        if not modeller:
+            return None
+        secilen_model = modeller[0]
+        for tercih in ("qwen2.5-coder", "qwen2.5", "llama3.1", "llama3", "gemma2"):
+            eslesen = [m for m in modeller if tercih in m.lower()]
+            if eslesen:
+                secilen_model = eslesen[0]
+                break
+
+        prompt = (
+            "Sen bir finans analiz ve sistem denetci asistanisin. Kisa, net ve Turkce yanit ver.\n"
+            f"Sistem Durumu: {sistem_ozeti}\n"
+            f"Kullanici Mesaji: {kullanici_sorusu}"
+        )
+        payload = _json.dumps({
+            "model": secilen_model,
+            "prompt": prompt,
+            "stream": False
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=25) as r:
+            cevap = _json.loads(r.read().decode("utf-8")).get("response", "").strip()
+        if cevap:
+            return f"[{secilen_model}] {cevap}"
+    except Exception:
+        return None
+    return None
+
+
+
+
+def _ortak_gecmis_metni(limit=12):
+    gecmis = sohbet_gecmisi_getir()[-limit:]
+    satirlar = []
+    for m in gecmis:
+        kim = m.get("kim") or ("Denetci" if m.get("rol") == "ajan" else "Sen")
+        satirlar.append(f"[{m.get('zaman', '')}] {kim}: {m.get('mesaj', '')}")
+    return "\n".join(satirlar)
+
+
+def _sistem_durum_ozeti():
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=10)
+        cur = conn.cursor()
+        toplam_s = cur.execute("SELECT COUNT(*) FROM ai_sinyaller").fetchone()[0]
+        bekleyen_s = cur.execute("SELECT COUNT(*) FROM ai_sinyaller WHERE durum LIKE 'BEK%YOR'").fetchone()[0]
+        conn.close()
+    except Exception as e:
+        return f"DB okuma hatasi: {e}"
+    kuyruk = kuyrugu_getir()
+    bekleyen_ia = [f"{x['id']} ({x.get('baslik')})" for x in kuyruk if x.get("durum") == "BEKLIYOR"]
+    return f"Toplam sinyal: {toplam_s}, Bekleyen sinyal: {bekleyen_s}, Onay bekleyen IA: {bekleyen_ia or 'Yok'}"
+
+
+def _denetci_yanit_uret(metin):
+    yukari = metin.upper().strip()
+    if yukari.startswith("ONAYLA "):
+        oid = metin.split(None, 1)[1].strip()
+        return onayla_oneriyi(oid)
+    if yukari.startswith("RED ") or yukari.startswith("REDDET "):
+        oid = metin.split(None, 1)[1].strip()
+        return reddet_oneriyi(oid)
+    if "TARA" in yukari or "DENETLE" in yukari:
+        ozet = denetim_calistir(telegram_bildir=False)
+        return f"Denetim tamamlandi. Yeni uyari: {ozet['yeni_uyarilar']} | Kuyruktaki toplam kayit: {ozet['toplam_kuyruk']} | {_sistem_durum_ozeti()}"
+    if "DURUM" in yukari or "OZET" in yukari:
+        return _sistem_durum_ozeti()
+    return f"Emir alindi ({_sistem_durum_ozeti()}). Onay bekleyen kayitlar icin 'ONAYLA IA' veya 'TARA' / 'DURUM' yazabilirsin."
+
+
+def _ollama_yanit_uret(metin, denetci_notu=""):
+    import urllib.request
+    import json as _json
+    ortak_sohbet = _ortak_gecmis_metni(limit=12)
+    sistem_ozeti = _sistem_durum_ozeti()
+    try:
+        req_tags = urllib.request.Request("http://localhost:11434/api/tags", method="GET")
+        with urllib.request.urlopen(req_tags, timeout=2) as resp:
+            tags_data = _json.loads(resp.read().decode("utf-8"))
+        modeller = [m.get("name") for m in tags_data.get("models", []) if m.get("name")]
+        if not modeller:
+            return "Ollama servisi acik ancak henuz model indirilmemis (Ollama_TradeIA_Baslat.bat ile indirilebilir)."
+        secilen_model = modeller[0]
+        for tercih in ("qwen2.5-coder", "qwen2.5", "llama3.1", "llama3", "gemma2"):
+            eslesen = [m for m in modeller if tercih in m.lower()]
+            if eslesen:
+                secilen_model = eslesen[0]
+                break
+
+        prompt = (
+            "Sen Trade IA sistemindeki yerel yapay zeka uzmanisin (Ollama). "
+            "Sistemde bir de kural tabanli 'Denetci' ajani var ve ikiniz ayni sohbet odasindasiniz. "
+            "Kullanicinin izni olmadan dosya veya veritabani degisikligi yapma; oneri sun ve izin iste. "
+            "Kisa, net ve Turkce yanit ver.\n\n"
+            f"Guncel Sistem Ozeti: {sistem_ozeti}\n"
+            f"Ortak Sohbet ve Emir Gecmisi:\n{ortak_sohbet}\n"
+        )
+        if denetci_notu:
+            prompt += f"Denetcinin Az Onceki Ciktisi: {denetci_notu}\n"
+        prompt += f"Kullanicinin Son Mesaji: {metin}"
+
+        payload = _json.dumps({
+            "model": secilen_model,
+            "prompt": prompt,
+            "stream": False
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=35) as r:
+            cevap = _json.loads(r.read().decode("utf-8")).get("response", "").strip()
+        if cevap:
+            return f"[{secilen_model}] {cevap}"
+    except Exception:
+        return "Ollama su an kapali (aktif etmek icin Ollama_TradeIA_Baslat.bat dosyasini acabilirsin)."
+    return "Ollama yanit uretemedi."
+
+
+
+def sohbet_gecmisi_kaydet(gecmis):
+    import json as _json
+    yol = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ajan_sohbet.json")
+    with open(yol, "w", encoding="utf-8") as f:
+        _json.dump(gecmis[-200:], f, ensure_ascii=False, indent=2)
+
+
+def kullanici_mesaji_isle(mesaj, kaynak="Web"):
     metin = (mesaj or "").strip()
     if not metin:
         return ""
-    sohbet_ekle("kullanici", metin)
-    ust = metin.upper()
+    zaman = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    gecmis = sohbet_gecmisi_getir()
+    gecmis.append({"rol": "kullanici", "kim": f"Sen ({kaynak})", "zaman": zaman, "mesaj": metin})
 
-    if ust in ("TARA", "DENETLE", "KONTROL"):
-        ozet = denetim_calistir(telegram_bildir=False)
-        yanit = f"Denetim tamamlandi. Yeni uyari: {ozet['yeni_uyarilar']} | Toplam kuyruk: {ozet['toplam_kuyruk']}."
-        sohbet_ekle("ajan", yanit)
-        return yanit
+    alcak = metin.lower()
+    hedef = "ikisi"
+    temiz_metin = metin
+    if "@denetci" in alcak and "@ollama" not in alcak:
+        hedef = "denetci"
+        temiz_metin = metin.replace("@denetci", "").replace("@DENETCI", "").strip() or "DURUM"
+    elif "@ollama" in alcak and "@denetci" not in alcak:
+        hedef = "ollama"
+        temiz_metin = metin.replace("@ollama", "").replace("@OLLAMA", "").strip() or "Durumu yorumla"
+    elif "@ikisi" in alcak:
+        hedef = "ikisi"
+        temiz_metin = metin.replace("@ikisi", "").replace("@IKISI", "").strip() or "DURUM"
 
-    if ust in ("DURUM", "OZET"):
-        conn = sqlite3.connect(DB_PATH, timeout=15)
-        cur = conn.cursor()
-        toplam = cur.execute("SELECT COUNT(*) FROM ai_sinyaller").fetchone()[0]
-        dagilim = cur.execute("SELECT durum, COUNT(*) FROM ai_sinyaller GROUP BY durum").fetchall()
-        conn.close()
-        bekleyen_oneri = [x["id"] for x in kuyrugu_getir() if x.get("durum") == "BEKLIYOR"]
-        yanit = f"DB Toplam: {toplam} | Dagilim: {dagilim} | Bekleyen Ajan Onerisi: {bekleyen_oneri}"
-        sohbet_ekle("ajan", yanit)
-        return yanit
+    yanitlar = []
+    denetci_cevabi = ""
 
-    yanit = (
-        "Mesajini aldim. Hizli komutlar: 'DURUM' (sistem ve DB ozeti), 'TARA' (anlik denetim). "
-        "Bekleyen bir oneriyi asagidaki 'Onayla ve Coz' butonuyla onaylayabilirsin."
-    )
-    sohbet_ekle("ajan", yanit)
-    return yanit
+    if hedef in ("denetci", "ikisi"):
+        denetci_cevabi = _denetci_yanit_uret(temiz_metin)
+        gecmis.append({
+            "rol": "ajan",
+            "kim": "Denetci",
+            "zaman": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "mesaj": denetci_cevabi,
+        })
+        yanitlar.append(f"Denetci: {denetci_cevabi}")
+
+    if hedef in ("ollama", "ikisi"):
+        ollama_cevabi = _ollama_yanit_uret(temiz_metin, denetci_notu=denetci_cevabi)
+        gecmis.append({
+            "rol": "ajan",
+            "kim": "Ollama",
+            "zaman": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "mesaj": ollama_cevabi,
+        })
+        yanitlar.append(f"Ollama: {ollama_cevabi}")
+
+    sohbet_gecmisi_kaydet(gecmis)
+    return "\n\n".join(yanitlar)
+
+
+TASLAK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "onay_taslagi.json")
+
+
+def _niyet_ve_hedef_cozumle(metin):
+    alcak = (metin or "").lower().strip()
+    if "@denetci" in alcak and "@ollama" not in alcak:
+        hedef = "denetci"
+        temiz = metin.replace("@denetci", "").replace("@DENETCI", "").strip() or "DURUM"
+        return hedef, temiz, True
+    if "@ollama" in alcak and "@denetci" not in alcak:
+        hedef = "ollama"
+        temiz = metin.replace("@ollama", "").replace("@OLLAMA", "").strip() or "Durumu yorumla"
+        return hedef, temiz, True
+    if "@ikisi" in alcak:
+        hedef = "ikisi"
+        temiz = metin.replace("@ikisi", "").replace("@IKISI", "").strip() or "DURUM"
+        return hedef, temiz, True
+
+    komut_anahtar = ("tara", "denetle", "durum", "ozet", "kuyruk", "onayla", "red", "reddet", "temizle", "yedek")
+    yorum_anahtar = ("yorumla", "analiz", "neden", "nasil", "strateji", "risk", "oner", "tavsiye", "degerlendir")
+
+    komut_var = any(k in alcak for k in komut_anahtar)
+    yorum_var = any(k in alcak for k in yorum_anahtar)
+
+    if komut_var and yorum_var:
+        hedef = "ikisi"
+    elif komut_var:
+        hedef = "denetci"
+    elif yorum_var:
+        hedef = "ollama"
+    else:
+        hedef = "ikisi"
+
+    return hedef, metin.strip(), False
+
+
+def _niyet_ozeti_olustur(hedef, temiz_metin):
+    hedef_etiket = {"denetci": "Denetci", "ollama": "Ollama", "ikisi": "Denetci + Ollama"}.get(hedef, "Denetci + Ollama")
+    yukari = temiz_metin.upper()
+    if "TARA" in yukari or "DENETLE" in yukari:
+        eylem = "Sistem ve veritabani denetimi calistirmak"
+    elif "DURUM" in yukari or "OZET" in yukari:
+        eylem = "Guncel sinyal, bekleyen kayit ve IA kuyruk durumunu getirmek"
+    elif yukari.startswith("ONAYLA "):
+        eylem = f"'{temiz_metin}' onerisini onaylayip uygulamak"
+    else:
+        eylem = f"'{temiz_metin}' istegini islemek"
+    return f"Anlasilan ozet: {eylem} | Gorevli: {hedef_etiket}"
+
+
+def taslak_oku():
+    if not os.path.exists(TASLAK_FILE):
+        return None
+    try:
+        with open(TASLAK_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) and data.get("aktif") else None
+    except Exception:
+        return None
+
+
+def taslak_yaz(taslak_dict):
+    try:
+        with open(TASLAK_FILE, "w", encoding="utf-8") as f:
+            json.dump(taslak_dict, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def taslak_temizle():
+    if os.path.exists(TASLAK_FILE):
+        try:
+            os.remove(TASLAK_FILE)
+        except Exception:
+            pass
+
+
+def _dogrudan_calistir(hedef, temiz_metin, orijinal_mesaj, kaynak="Web"):
+    zaman = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    gecmis = sohbet_gecmisi_getir()
+    gecmis.append({"rol": "kullanici", "kim": f"Sen ({kaynak})", "zaman": zaman, "mesaj": orijinal_mesaj})
+
+    yanitlar = []
+    denetci_cevabi = ""
+
+    if hedef in ("denetci", "ikisi"):
+        denetci_cevabi = _denetci_yanit_uret(temiz_metin)
+        gecmis.append({
+            "rol": "ajan",
+            "kim": "Denetci",
+            "zaman": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "mesaj": denetci_cevabi,
+        })
+        yanitlar.append(f"Denetci: {denetci_cevabi}")
+
+    if hedef in ("ollama", "ikisi"):
+        ollama_cevabi = _ollama_yanit_uret(temiz_metin, denetci_notu=denetci_cevabi)
+        gecmis.append({
+            "rol": "ajan",
+            "kim": "Ollama",
+            "zaman": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "mesaj": ollama_cevabi,
+        })
+        yanitlar.append(f"Ollama: {ollama_cevabi}")
+
+    sohbet_gecmisi_kaydet(gecmis)
+    return "\n\n".join(yanitlar)
+
+
+def taslak_onayla(kaynak="Web"):
+    t = taslak_oku()
+    if not t:
+        return "Onay bekleyen taslak bulunmuyor."
+    taslak_temizle()
+    return _dogrudan_calistir(t.get("hedef", "ikisi"), t.get("temiz_metin", ""), t.get("orijinal_mesaj", ""), kaynak=kaynak)
+
+
+def taslak_reddet(kaynak="Web"):
+    t = taslak_oku()
+    taslak_temizle()
+    if not t:
+        return "Iptal edilecek taslak bulunmuyor."
+    zaman = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    gecmis = sohbet_gecmisi_getir()
+    gecmis.append({"rol": "kullanici", "kim": f"Sen ({kaynak})", "zaman": zaman, "mesaj": "Hayir (taslak iptal)"})
+    gecmis.append({"rol": "ajan", "kim": "Denetci", "zaman": zaman, "mesaj": "Taslak iptal edildi. Yeni istegini yazabilirsin."})
+    sohbet_gecmisi_kaydet(gecmis)
+    return "Taslak iptal edildi. Yeni istegini yazabilirsin."
+
+
+def mesaj_ve_onay_isle(mesaj, kaynak="Web", dogrudan_onay=False):
+    metin = (mesaj or "").strip()
+    if not metin:
+        return {"durum": "bos", "yanit": ""}
+
+    # Kullanici ayrica 'evet' veya 'hayir' yazarsa taslagi isler
+    kucuk = metin.lower()
+    if taslak_oku() and kucuk in ("evet", "evet.", "onay", "tamam"):
+        return {"durum": "calisti", "yanit": taslak_onayla(kaynak=kaynak)}
+    if taslak_oku() and kucuk in ("hayir", "hay?r", "iptal", "vazgec", "vazge?"):
+        return {"durum": "iptal", "yanit": taslak_reddet(kaynak=kaynak)}
+
+    hedef, temiz_metin, etiket_acik = _niyet_ve_hedef_cozumle(metin)
+    if dogrudan_onay or etiket_acik:
+        taslak_temizle()
+        return {"durum": "calisti", "yanit": _dogrudan_calistir(hedef, temiz_metin, metin, kaynak=kaynak)}
+
+    ozet = _niyet_ozeti_olustur(hedef, temiz_metin)
+    taslak = {
+        "aktif": True,
+        "orijinal_mesaj": metin,
+        "temiz_metin": temiz_metin,
+        "hedef": hedef,
+        "ozet": ozet,
+        "kaynak": kaynak,
+        "zaman": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    taslak_yaz(taslak)
+    return {"durum": "onay_bekliyor", "ozet": ozet, "taslak": taslak, "yanit": ""}

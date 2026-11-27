@@ -447,8 +447,32 @@ elif aktif == 7:
 elif aktif == 8:
     yardim_paneli()
 
-
 # === PIYASA DENETCISI (??) SOHBET PENCERESI ===
+def _ajan_konum_oku():
+    import json, os
+    yol = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ajan_konum.json')
+    varsayilan = {'dock': 'right', 'top': 80}
+    if not os.path.exists(yol):
+        return varsayilan
+    try:
+        with open(yol, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+            varsayilan.update(d)
+    except Exception:
+        pass
+    return varsayilan
+
+
+def _ajan_konum_yaz(veri):
+    import json, os
+    yol = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ajan_konum.json')
+    try:
+        with open(yol, 'w', encoding='utf-8') as f:
+            json.dump(veri, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
 def _ajan_arka_plan_baslat():
     if st.session_state.get('_ajan_bg_started'):
         return
@@ -460,10 +484,16 @@ def _ajan_arka_plan_baslat():
             while True:
                 time.sleep(900)
                 try:
-                    denetim_calistir(telegram_bildir=True)
+                    denetim_calistir(telegram_bildir=False)
                 except Exception:
                     pass
         threading.Thread(target=_dongu, daemon=True, name='piyasa-denetci-daemon').start()
+        try:
+            from trade_ia_telegram import telegram_dinleyici_dongusu
+            threading.Thread(target=telegram_dinleyici_dongusu, daemon=True, name="trade-ia-telegram-daemon").start()
+        except Exception:
+            pass
+
     except Exception:
         pass
 
@@ -485,88 +515,138 @@ def render_piyasa_denetcisi_ui():
 
     if 'piyasa_denetci_acik' not in st.session_state:
         st.session_state['piyasa_denetci_acik'] = False
+    if 'ajan_konum' not in st.session_state:
+        st.session_state['ajan_konum'] = _ajan_konum_oku()
+
+    konum = st.session_state['ajan_konum']
+    dock = konum.get('dock', 'right')
+    top_px = int(konum.get('top', 80))
 
     kuyruk = kuyrugu_getir()
     bekleyenler = [x for x in kuyruk if x.get('durum') == 'BEKLIYOR']
     etiket = '📈 ' + str(len(bekleyenler)) if bekleyenler else '📈'
 
+    side_css = 'left: 16px; right: auto;' if dock == 'left' else 'right: 16px; left: auto;'
     st.markdown('''
         <style>
-        div[data-testid="stButton"]:has(button[key="btn_piyasa_denetci_toggle"]),
         .st-key-btn_piyasa_denetci_toggle {
             position: fixed !important;
-            top: 14px !important;
-            right: 18px !important;
-            z-index: 99999 !important;
+            top: ''' + str(top_px) + '''px !important;
+            ''' + side_css + '''
+            z-index: 999999 !important;
             width: auto !important;
         }
         .st-key-btn_piyasa_denetci_toggle button {
             min-height: 44px !important;
             height: 44px !important;
-            padding: 0 13px !important;
+            padding: 0 14px !important;
             font-size: 16px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             border-radius: 12px !important;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.28) !important;
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(148,163,184,0.5) !important;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important;
         }
         </style>
     ''', unsafe_allow_html=True)
 
-    if st.button(etiket, key='btn_piyasa_denetci_toggle', help='Piyasa Denetcisi (Ac / Kapat)'):
+    if st.button(etiket, key='btn_piyasa_denetci_toggle', help='Piyasa Denetcisi Penceresini Ac / Kapat'):
         st.session_state['piyasa_denetci_acik'] = not st.session_state['piyasa_denetci_acik']
         st.rerun()
 
     if not st.session_state['piyasa_denetci_acik']:
         return
 
-    with st.expander('📈 Piyasa Denetcisi - Uyari, Onay ve Sohbet', expanded=True):
-        ust_c1, ust_c2, ust_c3 = st.columns([2, 3, 1])
-        with ust_c1:
+    if dock == 'left':
+        ana_kol, yan_kol = st.columns([4, 6])
+        pencere_kol = ana_kol
+    else:
+        yan_kol, ana_kol = st.columns([6, 4])
+        pencere_kol = ana_kol
+
+    with pencere_kol:
+        with st.container(border=True):
+            h1, h2, h3, h4 = st.columns([4, 2, 2, 2])
+            with h1:
+                st.markdown('### 📈 Piyasa Denetcisi')
+                st.caption('Konum: ' + ('SOL' if dock == 'left' else 'SAG') + ' | Bekleyen: ' + str(len(bekleyenler)))
+            with h2:
+                if st.button('Sola Al', key='btn_ajan_sol'):
+                    konum['dock'] = 'left'
+                    st.session_state['ajan_konum'] = konum
+                    _ajan_konum_yaz(konum)
+                    st.rerun()
+            with h3:
+                if st.button('Saga Al', key='btn_ajan_sag'):
+                    konum['dock'] = 'right'
+                    st.session_state['ajan_konum'] = konum
+                    _ajan_konum_yaz(konum)
+                    st.rerun()
+            with h4:
+                if st.button('✕ Kapat', key='btn_ajan_kapat'):
+                    st.session_state['piyasa_denetci_acik'] = False
+                    st.rerun()
+
             if st.button('Simdi Denetle', key='btn_ajan_simdi_tara'):
                 ozet = denetim_calistir(telegram_bildir=False)
-                st.success('Denetim tamamlandi. Yeni: ' + str(ozet['yeni_uyarilar']) + ' | Kuyruk: ' + str(ozet['toplam_kuyruk']))
-                st.rerun()
-        with ust_c2:
-            st.caption('Bekleyen Oneri: ' + str(len(bekleyenler)) + ' | Telegram: Aktif')
-        with ust_c3:
-            if st.button('✕ Kapat', key='btn_ajan_kapat'):
-                st.session_state['piyasa_denetci_acik'] = False
+                st.success('Yeni: ' + str(ozet['yeni_uyarilar']) + ' | Kuyruk: ' + str(ozet['toplam_kuyruk']))
                 st.rerun()
 
-        st.markdown('**Bekleyen Oneriler (Cozeyim mi?)**')
-        if not bekleyenler:
-            st.info('Su an onay bekleyen yeni bir uyari yok.')
-        else:
-            for item in bekleyenler:
-                oid = str(item.get('id', ''))
-                baslik = str(item.get('baslik', ''))
-                sorun = str(item.get('sorun', ''))
-                cozum = str(item.get('cozum', ''))
-                st.markdown('- **' + oid + ' - ' + baslik + '**: ' + sorun + '  \n  *Oneri:* ' + cozum)
-                b1, b2, _ = st.columns([2, 2, 6])
-                with b1:
-                    if st.button('Onayla ve Coz', key='onayla_' + oid):
-                        sonuc = onayla_oneriyi(oid)
-                        st.success(sonuc)
-                        st.rerun()
-                with b2:
-                    if st.button('Reddet', key='reddet_' + oid):
-                        sonuc = reddet_oneriyi(oid)
-                        st.info(sonuc)
-                        st.rerun()
+            st.markdown('**Bekleyen Oneriler (Cozeyim mi?)**')
+            if not bekleyenler:
+                st.info('Su an onay bekleyen yeni bir uyari yok.')
+            else:
+                for item in bekleyenler:
+                    oid = str(item.get('id', ''))
+                    baslik = str(item.get('baslik', ''))
+                    sorun = str(item.get('sorun', ''))
+                    cozum = str(item.get('cozum', ''))
+                    st.markdown('- **' + oid + ' - ' + baslik + '**: ' + sorun + '  \n  *Oneri:* ' + cozum)
+                    b1, b2 = st.columns(2)
+                    with b1:
+                        if st.button('Onayla ve Coz', key='onayla_' + oid):
+                            sonuc = onayla_oneriyi(oid)
+                            st.success(sonuc)
+                            st.rerun()
+                    with b2:
+                        if st.button('Reddet', key='reddet_' + oid):
+                            sonuc = reddet_oneriyi(oid)
+                            st.info(sonuc)
+                            st.rerun()
 
-        st.divider()
-        st.markdown('**Sohbet Gecmisi**')
-        for m in sohbet_gecmisi_getir()[-12:]:
-            rol = '📈 Denetci' if m.get('rol') == 'ajan' else 'Sen'
-            st.markdown('**' + rol + '** *(' + str(m.get('zaman', '')) + ')*: ' + str(m.get('mesaj', '')))
+            st.divider()
+            st.markdown('**Sohbet Gecmisi**')
+            for m in sohbet_gecmisi_getir()[-10:]:
+                rol = m.get('kim') or ('📈 Denetci' if m.get('rol') == 'ajan' else 'Sen')
+                st.markdown('**' + rol + '** *(' + str(m.get('zaman', '')) + ')*: ' + str(m.get('mesaj', '')))
 
-        with st.form('form_piyasa_denetci_sohbet', clear_on_submit=True):
-            girdi = st.text_input('Denetciye yaz (ornek: DURUM, TARA veya soru):', key='input_ajan_mesaj')
-            gonderildi = st.form_submit_button('Gonder')
-            if gonderildi and girdi:
-                kullanici_mesaji_isle(girdi)
-                st.rerun()
+            with st.form('form_piyasa_denetci_sohbet', clear_on_submit=True):
+
+
+
+                # --- Etiketsiz Ozet + Evet/Hayir Kutucugu + Serbest Yazma ---
+                try:
+                    from denetci_ajan import mesaj_ve_onay_isle as _mvo_isle, taslak_oku as _t_oku, taslak_onayla as _t_onayla, taslak_reddet as _t_reddet
+                    _aktif_taslak = _t_oku()
+                    if _aktif_taslak:
+                        st.info('Bunu mu demek istediniz?\n\n**' + str(_aktif_taslak.get('ozet', '')) + '**\n\nIsterseniz asagidaki **Evet / Hayir** kutucuklarina basin veya hicbirine basmadan dogrudan yeni yazinizi girin.')
+                        c_evet, c_hayir = st.columns(2)
+                        with c_evet:
+                            if st.button('Evet', key='btn_taslak_evet', use_container_width=True):
+                                _t_onayla(kaynak='Web')
+                                st.rerun()
+                        with c_hayir:
+                            if st.button('Hayir', key='btn_taslak_hayir', use_container_width=True):
+                                _t_reddet(kaynak='Web')
+                                st.rerun()
+                except Exception:
+                    pass
+                girdi = st.text_input('Mesaj yaz (@denetci, @ollama veya @ikisi):', key='input_ajan_mesaj')
+                gonderildi = st.form_submit_button('Gonder')
+                if gonderildi and girdi:
+                    kullanici_mesaji_isle(girdi)
+                    st.rerun()
 
 
 try:
