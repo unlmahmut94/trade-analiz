@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 import datetime
 import os
 import numpy as np
@@ -275,22 +275,29 @@ def sinyal_kaydet(hisse, sinyal_tipi, giris_fiyat, hedef_fiyat, stop_fiyat):
             print(f"[TEMIZLIK] {hisse}: {len(mevcut_liste)-1} eski BEKLIYOR kaydi GUNCELLENDI yapildi")
             mevcut_liste = [en_yeni]
         
+        _g = float(giris_fiyat)
+        _h = float(hedef_fiyat)
+        _s = float(stop_fiyat)
+        if _g <= 0 or _h <= 0 or _s <= 0 or _h <= _g or _s >= _g:
+            print(f"[ENGEL-FIYAT] {hisse}: Gecersiz veya ters fiyat/hedef/stop (G:{_g}, H:{_h}, S:{_s}) - kaydedilmedi.")
+            conn.close()
+            return False
+        _hedef_pct = (_h - _g) / _g * 100.0
+        _stop_pct = (_g - _s) / _g * 100.0
+        if _hedef_pct > 50.0 or _stop_pct > 30.0:
+            print(f"[ENGEL-ORAN] {hisse}: Ucuk hedef/stop orani (hedef %{_hedef_pct:.1f}, stop %{_stop_pct:.1f}) - kaydedilmedi.")
+            conn.close()
+            return False
         if mevcut_liste:
             eski_id, eski_giris, eski_durum, eski_tarih = mevcut_liste[0]
-            fark_yuzde = abs(float(giris_fiyat) - float(eski_giris)) / float(eski_giris) * 100 if float(eski_giris) > 0 else 100
-            
-            try:
-                eski_dt = datetime.datetime.strptime(eski_tarih, "%Y-%m-%d %H:%M:%S")
-                if (datetime.datetime.now() - eski_dt).total_seconds() < 3600 and fark_yuzde < 1.0:
-                    print(f"[BILGI] {hisse} son 1 saatte zaten BEKLIYOR (fark %{fark_yuzde:.1f}) - yine de kaydediliyor (hafta sonu sabit fiyat)")
-            except:
-                pass
-            
-            # Fiyat farkina bakmaksizin eski pozisyonu GUNCELLENDI yap, yeni sinyali kaydet
-            c.execute("UPDATE ai_sinyaller SET durum=?, kapanis_fiyati=? WHERE id=?", 
-                      ('GUNCELLENDI', float(giris_fiyat), eski_id))
-            print(f"[GUNCELLE] {hisse}: Eski BEKLIYOR pozisyon (giris: {eski_giris:.2f}, fark %{fark_yuzde:.1f}) -> yeni pozisyon (giris: {giris_fiyat:.2f}) ile guncellendi")
-        
+            _eski_g = float(eski_giris) if eski_giris else 0.0
+            fark_yuzde = abs(_g - _eski_g) / _eski_g * 100.0 if _eski_g > 0 else 100.0
+            if fark_yuzde < 2.0:
+                print(f"[ENGEL-TEKRAR] {hisse}: Zaten BEKLIYOR ve fiyat farki %{fark_yuzde:.2f} (<%2.0) - yeni sinyal acilmadi.")
+                conn.close()
+                return False
+            c.execute("UPDATE ai_sinyaller SET durum=?, kapanis_fiyati=? WHERE id=?", ('GUNCELLENDI', _g, eski_id))
+            print(f"[GUNCELLE] {hisse}: Fiyat %{fark_yuzde:.1f} degisti -> eski pozisyon GUNCELLENDI yapildi.")
         tarih = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute('''INSERT INTO ai_sinyaller 
                      (tarih, hisse, sinyal_tipi, giris_fiyati, hedef_fiyat, stop_fiyat, durum, kapanis_fiyati) 
